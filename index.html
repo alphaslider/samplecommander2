@@ -1,0 +1,2893 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nexus Mp4 Foundry</title>
+<style>
+  :root {
+    --chassis: #0f1218;
+    --screen-bg: #040609;
+    --rubber-top: #2f3744;
+    --rubber-mid: #1f252f;
+    --rubber-bot: #141820;
+    --bevel-hi: rgba(255, 255, 255, 0.14);
+    --bevel-soft: rgba(255, 255, 255, 0.06);
+    --text-hi: #f2f6fb;
+    --text-mid: #adbacf;
+    --text-dim: #6c7b90;
+    --cyan: #38f6ff;
+    --amber: #ffc13b;
+    --emerald: #35ff9b;
+    --crimson: #ff3355;
+    --violet: #b66dff;
+    --zip-gold: #ffbe3d;
+    --font-mono: ui-monospace, "Cascadia Mono", "SFMono-Regular", Menlo, Consolas, monospace;
+    --font-ui: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+
+  * { box-sizing: border-box; user-select: none; -webkit-user-select: none; }
+
+  html, body {
+    margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
+    background: var(--chassis); color: var(--text-hi);
+    font-family: var(--font-ui); font-size: 12px;
+  }
+
+  ::-webkit-scrollbar { width: 9px; height: 9px; }
+  ::-webkit-scrollbar-track { background: #05070b; box-shadow: inset 1px 0 3px #000; }
+  ::-webkit-scrollbar-thumb { background: linear-gradient(180deg, #3f4a5c, #242b37); border: 1px solid #080a0e; border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: linear-gradient(180deg, #526077, #323c4d); }
+
+  .app-shell {
+    display: flex; flex-direction: column; height: 100vh; width: 100vw;
+    background:
+      repeating-linear-gradient(0deg, rgba(255,255,255,0.015) 0px, rgba(255,255,255,0.015) 1px, transparent 1px, transparent 3px),
+      linear-gradient(180deg, #1d222b 0%, #0e1117 100%);
+  }
+
+  /* ==================== TOP MASTER CONSOLE ==================== */
+  .master-bar {
+    display: flex; align-items: center; gap: 10px; padding: 5px 10px;
+    background: linear-gradient(180deg, #2f3644 0%, #1e242f 52%, #151921 100%);
+    border-top: 1px solid var(--bevel-hi); border-bottom: 2px solid #040507;
+    box-shadow: 0 3px 12px rgba(0,0,0,0.82); flex-shrink: 0; z-index: 40;
+  }
+
+  .brand-plate {
+    display: flex; align-items: center; padding: 4px 9px;
+    background: #0a0d12; border: 1px solid #040507; border-radius: 5px;
+    box-shadow: inset 0 2px 6px #000, 0 1px 0 var(--bevel-hi); flex-shrink: 0;
+  }
+  .brand-title { font-family: var(--font-mono); font-size: 10.5px; font-weight: 900; letter-spacing: 1px; color: var(--text-hi); white-space: nowrap; }
+  .brand-title span { color: var(--cyan); }
+  .brand-title em { font-style: normal; color: var(--amber); }
+
+  .master-menus {
+    display: flex; align-items: center; background: var(--screen-bg);
+    padding: 2px 4px; border-radius: 5px; border: 1px solid #040507;
+    box-shadow: inset 0 2px 7px #000, 0 1px 0 var(--bevel-hi); flex-shrink: 0;
+  }
+
+  .knob-rack {
+    display: flex; align-items: center; padding: 3px 9px;
+    background: linear-gradient(180deg, #1b2029, #12161d);
+    border: 1px solid #05070a; border-radius: 6px;
+    box-shadow: inset 0 2px 6px rgba(0,0,0,0.88), 0 1px 0 var(--bevel-hi); flex-shrink: 0;
+  }
+  .knob-unit { display: flex; align-items: center; gap: 6px; cursor: ns-resize; }
+  .knob-cap {
+    width: 24px; height: 24px; border-radius: 50%;
+    background: conic-gradient(from 0deg, #566276, #212630, #566276, #1b2028, #566276);
+    border: 1px solid #06080c; box-shadow: 0 2px 5px rgba(0,0,0,0.85), inset 0 1px 1px rgba(255,255,255,0.32);
+    position: relative; flex-shrink: 0;
+  }
+  .knob-cap::after { content: ''; position: absolute; inset: 4px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #3a4454, #141820); }
+  .knob-indicator {
+    position: absolute; width: 2px; height: 8px; background: var(--cyan); box-shadow: 0 0 5px var(--cyan);
+    left: 50%; top: 2px; transform-origin: 50% 10px; margin-left: -1px; border-radius: 1px; z-index: 2;
+  }
+  .knob-readout { display: flex; flex-direction: column; line-height: 1.05; min-width: 40px; }
+  .knob-name { font-family: var(--font-mono); font-size: 7.5px; font-weight: 800; color: var(--text-dim); }
+  .knob-val { font-family: var(--font-mono); font-size: 9.5px; font-weight: 800; color: var(--text-hi); }
+
+  .meter-rack {
+    display: flex; align-items: center; gap: 5px; background: var(--screen-bg);
+    border: 1px solid #040507; border-radius: 5px; padding: 3px 6px;
+    box-shadow: inset 0 3px 8px #000, 0 1px 0 var(--bevel-hi); flex-shrink: 0;
+  }
+  #masterMeterCanvas { width: 92px; height: 20px; display: block; }
+  .clip-led { width: 7px; height: 18px; border-radius: 2px; background: #23090e; border: 1px solid #06080b; cursor: pointer; }
+  .clip-led.clipped { background: var(--crimson); box-shadow: 0 0 9px var(--crimson); }
+
+  .rubber-btn {
+    background: linear-gradient(180deg, var(--rubber-top) 0%, var(--rubber-mid) 58%, var(--rubber-bot) 100%);
+    color: var(--text-hi); border: 1px solid #07090d; border-radius: 5px; padding: 6px 9px;
+    font-family: var(--font-mono); font-size: 9.5px; font-weight: 800; letter-spacing: 0.4px;
+    cursor: pointer; display: inline-flex; align-items: center; gap: 5px; flex-shrink: 0;
+    box-shadow: 0 3px 6px rgba(0,0,0,0.85), inset 0 1px 0 rgba(255,255,255,0.16), inset 0 -2px 4px rgba(0,0,0,0.7);
+  }
+  .rubber-btn:hover { background: linear-gradient(180deg, #3a4454 0%, #272e3a 60%, #1b2029 100%); color: #fff; }
+  .rubber-btn:active { transform: translateY(1px); box-shadow: 0 1px 2px rgba(0,0,0,0.9), inset 0 2px 5px rgba(0,0,0,0.9); }
+  .rubber-btn:disabled { opacity: 0.35; cursor: default; transform: none; }
+  .rubber-btn.glow-cyan { background: linear-gradient(180deg, #1b3a42 0%, #10242a 100%); color: var(--cyan); box-shadow: 0 0 11px rgba(56,246,255,0.3), inset 0 0 9px rgba(56,246,255,0.22); }
+  .rubber-btn.glow-amber { background: linear-gradient(180deg, #3f2f13 0%, #261c0b 100%); color: var(--amber); box-shadow: 0 0 11px rgba(255,193,59,0.3), inset 0 0 9px rgba(255,193,59,0.22); }
+  .rubber-btn.glow-red { background: linear-gradient(180deg, #7d1729 0%, #4a0c17 100%); color: #fff; box-shadow: 0 0 15px rgba(255,51,85,0.65); }
+  .rubber-btn.panic-flash { background: var(--crimson); color: #160205; box-shadow: 0 0 26px var(--crimson); }
+
+  .led-slit { width: 8px; height: 4px; border-radius: 2px; background: #14181f; box-shadow: inset 0 1px 2px #000; display: inline-block; flex-shrink: 0; }
+  .led-slit.cyan { background: var(--cyan); box-shadow: 0 0 7px var(--cyan); }
+  .led-slit.amber { background: var(--amber); box-shadow: 0 0 7px var(--amber); }
+  .led-slit.crimson { background: var(--crimson); box-shadow: 0 0 9px var(--crimson); }
+
+  .master-right { margin-left: auto; display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+  .kbd-tag { font-size: 8px; padding: 1px 4px; border-radius: 3px; background: rgba(0,0,0,0.55); color: var(--text-mid); }
+
+  /* ==================== DUAL-TILE WORKSPACE ==================== */
+  .dual-workspace { flex: 1; display: flex; padding: 7px 8px 6px 8px; min-height: 0; overflow: hidden; }
+
+  .tile {
+    flex: 1 1 50%; min-width: 260px; display: flex; flex-direction: column;
+    background: linear-gradient(180deg, #252c38 0%, #171c24 100%);
+    border: 1px solid #05070a; border-radius: 7px;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.8), inset 0 1px 0 var(--bevel-hi), inset 0 -1px 0 rgba(0,0,0,0.85);
+    min-height: 0; overflow: hidden; position: relative; transition: box-shadow 0.14s;
+  }
+  .tile.focused { box-shadow: 0 6px 18px rgba(0,0,0,0.86), 0 0 14px rgba(56,246,255,0.16), inset 0 1px 0 rgba(56,246,255,0.42); }
+  .tile[data-tile="B"].focused { box-shadow: 0 6px 18px rgba(0,0,0,0.86), 0 0 14px rgba(255,193,59,0.16), inset 0 1px 0 rgba(255,193,59,0.42); }
+  .tile.drag-over-tile { box-shadow: inset 0 0 26px rgba(56,246,255,0.35), 0 0 16px rgba(56,246,255,0.35); }
+
+  .split-rail { width: 10px; flex-shrink: 0; cursor: col-resize; display: flex; align-items: center; justify-content: center; }
+  .split-rail::after { content: ''; width: 4px; height: 44px; border-radius: 2px; background: linear-gradient(180deg, #3c4657, #1c222c, #3c4657); border: 1px solid #06080c; }
+  .split-rail:hover::after, .split-rail.dragging::after { background: var(--cyan); box-shadow: 0 0 9px var(--cyan); }
+
+  .tile-menubar {
+    display: flex; align-items: center;
+    background: linear-gradient(180deg, #2f3744 0%, #202630 55%, #171b23 100%);
+    border-bottom: 1px solid #050608; box-shadow: inset 0 1px 0 rgba(255,255,255,0.13);
+    padding: 0 7px; height: 32px; flex-shrink: 0; gap: 2px;
+  }
+  .tile-tag {
+    font-family: var(--font-mono); font-size: 9.5px; font-weight: 900; letter-spacing: 0.9px;
+    padding: 3px 7px; margin-right: 4px; border-radius: 4px; background: var(--screen-bg);
+    color: var(--cyan); box-shadow: inset 0 2px 5px #000; display: flex; align-items: center; gap: 5px;
+  }
+  .tile[data-tile="B"] .tile-tag { color: var(--amber); }
+
+  .menu-trigger {
+    position: relative; padding: 4px 8px; font-family: var(--font-mono); font-size: 10px;
+    font-weight: 800; color: var(--text-mid); cursor: pointer; border-radius: 4px; letter-spacing: 0.5px;
+  }
+  .menu-trigger:hover, .menu-trigger.open { background: #10141b; color: var(--text-hi); box-shadow: inset 0 2px 5px rgba(0,0,0,0.85); }
+  .menu-dropdown {
+    display: none; position: absolute; top: calc(100% + 2px); left: 0; min-width: 235px;
+    background: linear-gradient(180deg, #212733 0%, #141820 100%);
+    border: 1px solid #050608; border-radius: 5px;
+    box-shadow: 0 14px 34px rgba(0,0,0,0.95), inset 0 1px 0 var(--bevel-hi);
+    padding: 5px 0; z-index: 300;
+  }
+  .menu-trigger.open .menu-dropdown { display: block; }
+
+  .menu-header {
+    padding: 4px 12px; font-family: var(--font-mono); font-size: 9px; font-weight: 900;
+    letter-spacing: 0.7px; color: var(--cyan); text-transform: uppercase;
+    border-bottom: 1px solid rgba(255,255,255,0.06); margin-bottom: 3px;
+  }
+  .menu-header.group { color: var(--amber); }
+  .menu-item { display: flex; justify-content: space-between; align-items: center; padding: 6px 12px; font-size: 11px; font-weight: 500; color: var(--text-hi); cursor: pointer; }
+  .menu-item:hover { background: #133842; color: #fff; box-shadow: inset 3px 0 0 var(--cyan); }
+  .menu-item.accent:hover { background: #3f2f13; color: var(--amber); box-shadow: inset 3px 0 0 var(--amber); }
+  .menu-item.danger:hover { background: #47121e; color: #ffb8c4; box-shadow: inset 3px 0 0 var(--crimson); }
+  .menu-item .k { font-family: var(--font-mono); font-size: 9px; color: var(--text-dim); margin-left: 14px; }
+  .menu-sep { height: 1px; background: #0a0c10; border-bottom: 1px solid rgba(255,255,255,0.06); margin: 4px 0; }
+
+  .tile-quick-actions { margin-left: auto; display: flex; align-items: center; gap: 4px; }
+
+  .mini-rubber {
+    background: linear-gradient(180deg, #2f3745 0%, #1b2029 100%);
+    color: var(--text-hi); border: 1px solid #07090d; border-radius: 4px; padding: 3px 7px;
+    font-family: var(--font-mono); font-size: 9.5px; font-weight: 800; cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.15);
+  }
+  .mini-rubber:hover { background: linear-gradient(180deg, #3c4657 0%, #262d39 100%); color: #fff; }
+  .mini-rubber:active { transform: translateY(1px); box-shadow: inset 0 2px 5px #000; }
+  .mini-rubber.zip-accent { color: var(--zip-gold); }
+  .mini-rubber.cyan-accent { color: var(--cyan); }
+  .mini-rubber.emerald-accent { color: var(--emerald); }
+  .mini-rubber.crimson-accent { color: #ff7a90; }
+  .mini-rubber.active-chip { background: linear-gradient(180deg, #1b434d, #102930); color: var(--cyan); box-shadow: inset 0 1px 4px rgba(0,0,0,0.9); }
+
+  .tile-pathbar {
+    display: flex; align-items: center; gap: 6px; padding: 5px 8px;
+    background: linear-gradient(180deg, #1c212a 0%, #141820 100%);
+    border-bottom: 1px solid #06080b; flex-shrink: 0;
+  }
+  .breadcrumbs {
+    display: flex; align-items: center; gap: 3px; flex: 1; overflow-x: auto;
+    font-family: var(--font-mono); font-size: 10.5px; background: var(--screen-bg);
+    border: 1px solid #040507; border-radius: 5px; padding: 4px 7px;
+    box-shadow: inset 0 3px 8px #000;
+  }
+  .crumb { padding: 1px 5px; border-radius: 3px; color: var(--text-mid); cursor: pointer; white-space: nowrap; }
+  .crumb:hover { background: #1c2430; color: var(--cyan); }
+  .crumb.current { color: var(--text-hi); font-weight: 800; }
+  .crumb.is-zip { color: var(--zip-gold); }
+  .crumb.drop-hover { background: rgba(56,246,255,0.28); color: #fff; }
+  .crumb-sep { color: var(--text-dim); }
+
+  .filter-chips { display: flex; gap: 2px; background: var(--screen-bg); padding: 2px; border-radius: 4px; border: 1px solid #040507; }
+  .fchip { font-family: var(--font-mono); font-size: 8.5px; font-weight: 800; padding: 3px 5px; border-radius: 3px; color: var(--text-dim); cursor: pointer; border: none; background: transparent; }
+  .fchip:hover { color: var(--text-hi); }
+  .fchip.active { background: #1b3842; color: var(--cyan); }
+  .tile[data-tile="B"] .fchip.active { background: #3d2e13; color: var(--amber); }
+
+  .tile-search {
+    width: 96px; background: var(--screen-bg); border: 1px solid #040507; border-radius: 5px;
+    padding: 4px 7px; color: var(--text-hi); font-family: var(--font-mono); font-size: 10px;
+    outline: none; box-shadow: inset 0 3px 8px #000;
+  }
+  .tile-search::placeholder { color: var(--text-dim); }
+  .tile-search:focus { box-shadow: inset 0 3px 8px #000, 0 0 9px rgba(56,246,255,0.35); }
+
+  .tile-body {
+    flex: 1; overflow-y: auto; padding: 10px; margin: 5px; background: var(--screen-bg);
+    border: 1px solid #030406; border-radius: 6px;
+    box-shadow: inset 0 4px 14px #000, 0 1px 0 var(--bevel-hi); position: relative;
+  }
+
+  .item-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(146px, 1fr)); gap: 8px; align-content: start; min-height: 100%; }
+  .item-grid.list-view { grid-template-columns: 1fr; gap: 5px; }
+
+  .marquee-box { position: absolute; display: none; pointer-events: none; border: 1.5px dashed var(--cyan); background: rgba(56,246,255,0.14); z-index: 60; }
+  .marquee-box.amber { border-color: var(--amber); background: rgba(255,193,59,0.14); }
+
+  /* ==================== HARDWARE MEDIA CARDS ==================== */
+  .node-card {
+    position: relative; background: linear-gradient(180deg, #28303b 0%, #1b2028 55%, #13171e 100%);
+    border: 1px solid #06080b; border-radius: 6px; padding: 6px; cursor: pointer;
+    display: flex; flex-direction: column; gap: 5px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.85), inset 0 1px 0 rgba(255,255,255,0.14), inset 0 -2px 4px rgba(0,0,0,0.75);
+  }
+  .node-card:hover { background: linear-gradient(180deg, #323b49 0%, #222833 55%, #171c24 100%); }
+  .node-card.selected {
+    background: linear-gradient(180deg, #1b3a44 0%, #12252d 100%);
+    box-shadow: 0 0 14px rgba(56,246,255,0.38), inset 0 0 14px rgba(56,246,255,0.24), inset 0 1px 0 rgba(56,246,255,0.42);
+  }
+  .node-card.playing {
+    background: linear-gradient(180deg, #153a2b 0%, #0d231a 100%);
+    box-shadow: 0 0 18px rgba(53,255,155,0.5), inset 0 0 16px rgba(53,255,155,0.28), inset 0 1px 0 rgba(53,255,155,0.52);
+  }
+  .node-card.drop-target { background: linear-gradient(180deg, #194752 0%, #102c34 100%); box-shadow: 0 0 18px rgba(56,246,255,0.65); }
+  .node-card.zip-flash { box-shadow: 0 0 24px rgba(255,190,61,0.88), inset 0 0 16px rgba(255,190,61,0.45); }
+  .node-card.dragging { opacity: 0.35; }
+
+  .load-card { background: linear-gradient(180deg, #212834 0%, #141921 100%); }
+  .load-visual {
+    height: 66px; background: var(--screen-bg); border-radius: 4px; border: 1px solid #040507;
+    box-shadow: inset 0 3px 9px #000; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 6px; padding: 4px;
+  }
+  .load-glyph { font-family: var(--font-mono); font-size: 11px; font-weight: 900; color: var(--cyan); line-height: 1; }
+  .load-btn-row { display: flex; gap: 3px; width: 100%; }
+  .load-pill {
+    flex: 1; background: linear-gradient(180deg, #2f3745, #1b2029); border: 1px solid #07090d; border-radius: 3px;
+    color: var(--text-hi); font-family: var(--font-mono); font-size: 8.5px; font-weight: 800; padding: 3px 2px; cursor: pointer; text-align: center;
+  }
+  .load-pill:hover { background: #163a44; color: var(--cyan); }
+  .load-pill.zip-p:hover { background: #463412; color: var(--zip-gold); }
+  .load-pill.demo-p:hover { background: #143f2d; color: var(--emerald); }
+
+  .folder-visual, .media-visual {
+    height: 66px; background: var(--screen-bg); border: 1px solid #040507; border-radius: 4px;
+    display: flex; align-items: center; justify-content: center; position: relative;
+    box-shadow: inset 0 3px 9px #000; overflow: hidden;
+  }
+  .media-visual img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .media-fallback { font-family: var(--font-mono); font-size: 10px; font-weight: 900; color: var(--violet); letter-spacing: 1px; }
+
+  .type-pill {
+    position: absolute; top: 3px; left: 4px; font-family: var(--font-mono); font-size: 8px; font-weight: 900;
+    padding: 1px 4px; border-radius: 3px; background: rgba(5,7,10,0.88); pointer-events: none;
+  }
+  .type-pill.vid { color: var(--violet); border: 1px solid rgba(182,109,255,0.4); }
+  .type-pill.img { color: var(--emerald); border: 1px solid rgba(53,255,155,0.4); }
+
+  .vid-play-overlay {
+    position: absolute; width: 24px; height: 24px; border-radius: 50%;
+    background: rgba(5, 7, 10, 0.78); border: 1px solid rgba(255,255,255,0.3);
+    color: #fff; font-size: 10px; display: flex; align-items: center; justify-content: center; pointer-events: none;
+  }
+
+  .folder-glyph { width: 48px; height: 32px; position: relative; }
+  .folder-tab { width: 19px; height: 7px; background: linear-gradient(180deg, #70819b, #455163); border-radius: 3px 4px 0 0; }
+  .folder-body {
+    width: 48px; height: 25px; background: linear-gradient(180deg, #8294b0 0%, #4c5a70 65%, #343d4d 100%);
+    border-radius: 0 4px 4px 4px; display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-mono); font-size: 10px; font-weight: 900; color: #0b0e14;
+  }
+  .zip-card .folder-tab { background: linear-gradient(180deg, #ffd166, #c4881b); }
+  .zip-card .folder-body {
+    background: repeating-linear-gradient(90deg, rgba(0,0,0,0.18) 0px, rgba(0,0,0,0.18) 3px, transparent 3px, transparent 6px),
+      linear-gradient(180deg, #ffca4f 0%, #c98618 65%, #8a570a 100%);
+    color: #1c1102;
+  }
+  .zip-badge-corner { position: absolute; top: 3px; left: 4px; font-family: var(--font-mono); font-size: 8px; font-weight: 900; padding: 1px 4px; border-radius: 3px; background: #2e2108; color: var(--zip-gold); }
+  .zip-dl-btn {
+    position: absolute; top: 3px; right: 4px; font-family: var(--font-mono); font-size: 8px; font-weight: 800;
+    padding: 2px 5px; border-radius: 3px; border: 1px solid #07090d;
+    background: linear-gradient(180deg, #353e4d, #1e232c); color: var(--zip-gold); cursor: pointer;
+  }
+  .zip-dl-btn:hover { background: var(--zip-gold); color: #170f02; }
+  .zip-size-badge { position: absolute; bottom: 2px; right: 4px; font-family: var(--font-mono); font-size: 8.5px; font-weight: 700; color: var(--zip-gold); background: rgba(5,7,10,0.9); padding: 0 4px; border-radius: 2px; }
+
+  .wave-visual {
+    position: relative; height: 66px; background: var(--screen-bg); border: 1px solid #040507; border-radius: 4px;
+    box-shadow: inset 0 3px 10px #000; overflow: hidden; cursor: pointer;
+  }
+  .wave-visual canvas { width: 100%; height: 100%; display: block; }
+  .wave-badge-play {
+    position: absolute; top: 4px; left: 4px; width: 18px; height: 18px; border-radius: 4px;
+    background: linear-gradient(180deg, #2e3643, #171b22); border: 1px solid #06080b; color: var(--cyan);
+    font-size: 8.5px; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 2;
+  }
+  .wave-badge-play:hover { background: var(--cyan); color: #041418; }
+  .node-card.playing .wave-badge-play { background: var(--emerald); color: #04170d; }
+  .wave-badge-trim { position: absolute; top: 4px; right: 4px; font-family: var(--font-mono); font-size: 8px; font-weight: 800; padding: 1px 4px; border-radius: 2px; background: rgba(255,193,59,0.22); color: var(--amber); pointer-events: none; }
+  .wave-badge-dur { position: absolute; bottom: 2px; right: 4px; font-family: var(--font-mono); font-size: 9px; font-weight: 700; padding: 1px 4px; background: rgba(5,7,10,0.9); color: var(--text-hi); border-radius: 3px; pointer-events: none; }
+
+  .node-meta { display: flex; align-items: center; justify-content: space-between; gap: 5px; padding: 0 2px; }
+  .node-name { font-family: var(--font-mono); font-size: 10.5px; font-weight: 700; color: var(--text-hi); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; }
+  .node-sub { font-family: var(--font-mono); font-size: 9px; font-weight: 700; color: var(--text-dim); white-space: nowrap; }
+
+  .item-grid.list-view .node-card { flex-direction: row; align-items: center; padding: 4px 7px; gap: 8px; }
+  .item-grid.list-view .wave-visual, .item-grid.list-view .folder-visual,
+  .item-grid.list-view .load-visual, .item-grid.list-view .media-visual { width: 120px; height: 38px; flex-shrink: 0; }
+  .item-grid.list-view .folder-glyph { transform: scale(0.62); }
+  .item-grid.list-view .load-glyph, .item-grid.list-view .vid-play-overlay { display: none; }
+
+  .tile-footer {
+    display: flex; align-items: center; justify-content: space-between; padding: 4px 9px;
+    background: linear-gradient(180deg, #1b2028, #141820); border-top: 1px solid #06080b;
+    font-family: var(--font-mono); font-size: 9.5px; font-weight: 700; color: var(--text-mid); flex-shrink: 0;
+  }
+
+  /* ==================== ADAPTIVE BOTTOM FOUNDRY DECK ==================== */
+  .wave-deck {
+    display: flex; flex-direction: column; gap: 5px; padding: 6px 10px 8px 10px; height: 196px;
+    background: linear-gradient(180deg, #252c38 0%, #151921 100%);
+    border-top: 2px solid #040507; box-shadow: inset 0 1px 0 var(--bevel-hi); flex-shrink: 0;
+  }
+  .deck-panel { display: none; flex-direction: column; gap: 5px; height: 100%; min-height: 0; }
+  .deck-panel.active { display: flex; }
+
+  .deck-toolbar { display: flex; align-items: center; gap: 5px; overflow-x: auto; flex-shrink: 0; }
+  .deck-group {
+    display: flex; align-items: center; gap: 3px; padding: 3px 6px;
+    background: linear-gradient(180deg, #191e27, #11151c);
+    border: 1px solid #05070a; border-radius: 5px; flex-shrink: 0;
+  }
+  .deck-group-lbl { font-family: var(--font-mono); font-size: 8px; font-weight: 900; color: var(--text-dim); margin-right: 2px; }
+  .deck-slider { width: 58px; accent-color: var(--amber); cursor: pointer; height: 12px; }
+  .deck-stats {
+    margin-left: auto; font-family: var(--font-mono); font-size: 9px; font-weight: 800; color: var(--text-mid);
+    background: var(--screen-bg); border: 1px solid #040507; padding: 4px 8px; border-radius: 4px; white-space: nowrap;
+  }
+  .deck-stats span { color: var(--emerald); }
+
+  .big-wave-screen {
+    flex: 1; position: relative; background: var(--screen-bg); border: 1px solid #040507; border-radius: 6px;
+    box-shadow: inset 0 4px 14px #000, 0 1px 0 var(--bevel-hi); overflow: hidden; cursor: crosshair;
+  }
+  .big-wave-screen canvas { width: 100%; height: 100%; display: block; }
+  .big-wave-meta { position: absolute; top: 5px; left: 8px; font-family: var(--font-mono); font-size: 10px; font-weight: 800; color: var(--cyan); background: rgba(4,6,9,0.88); padding: 2px 7px; border-radius: 3px; pointer-events: none; }
+  .big-wave-hint { position: absolute; bottom: 5px; right: 8px; font-family: var(--font-mono); font-size: 8.5px; font-weight: 700; color: var(--text-dim); background: rgba(4,6,9,0.88); padding: 2px 6px; border-radius: 3px; pointer-events: none; }
+  .big-wave-zoom { position: absolute; top: 5px; right: 8px; font-family: var(--font-mono); font-size: 9px; font-weight: 800; color: var(--amber); background: rgba(4,6,9,0.88); padding: 2px 6px; border-radius: 3px; pointer-events: none; }
+
+  .media-stage {
+    flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; gap: 12px;
+    background: var(--screen-bg); border: 1px solid #040507; border-radius: 6px;
+    box-shadow: inset 0 4px 14px #000; padding: 6px; overflow: hidden; position: relative;
+  }
+  .media-stage video, .media-stage img { max-height: 100%; max-width: 100%; border-radius: 4px; background: #000; object-fit: contain; }
+  .media-stage img { cursor: zoom-in; }
+
+  /* ==================== CONTEXT MENU, TOAST, LIGHTBOX & MODAL ==================== */
+  .ctx-menu {
+    position: fixed; display: none; min-width: 245px; max-height: 84vh; overflow-y: auto;
+    background: linear-gradient(180deg, #222834 0%, #141820 100%);
+    border: 1px solid #050608; border-radius: 6px;
+    box-shadow: 0 14px 36px rgba(0,0,0,0.95), inset 0 1px 0 var(--bevel-hi);
+    padding: 5px 0; z-index: 999;
+  }
+  .ctx-menu.open { display: block; }
+
+  .toast-bar {
+    position: fixed; bottom: 204px; left: 50%; transform: translateX(-50%) translateY(8px);
+    background: linear-gradient(180deg, #1b2833, #0e161d); border: 1px solid var(--cyan); color: var(--cyan);
+    font-family: var(--font-mono); font-size: 10.5px; font-weight: 800; padding: 6px 14px; border-radius: 5px;
+    box-shadow: 0 10px 26px rgba(0,0,0,0.9); opacity: 0; pointer-events: none;
+    transition: opacity 0.15s, transform 0.15s; z-index: 1200;
+  }
+  .toast-bar.err { border-color: var(--crimson); color: #ff8ea1; }
+  .toast-bar.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  .modal-backdrop, .lightbox-backdrop {
+    position: fixed; inset: 0; background: rgba(3,5,8,0.88);
+    display: none; align-items: center; justify-content: center; z-index: 1000;
+  }
+  .modal-backdrop.open, .lightbox-backdrop.open { display: flex; }
+  .lightbox-content { max-width: 92vw; max-height: 88vh; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .lightbox-content img, .lightbox-content video { max-width: 90vw; max-height: 80vh; border: 1px solid #2b3545; border-radius: 6px; background: #000; box-shadow: 0 20px 60px #000; }
+  .lightbox-caption { font-family: var(--font-mono); font-size: 11px; color: var(--cyan); }
+
+  .modal-box {
+    width: 460px; max-width: 94vw; background: linear-gradient(180deg, #242b36 0%, #161a22 100%);
+    border: 1px solid #050608; border-radius: 8px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.95), inset 0 1px 0 var(--bevel-hi); overflow: hidden;
+  }
+  .modal-head {
+    background: linear-gradient(180deg, #2d3543, #1e232d); padding: 9px 14px; border-bottom: 1px solid #06080b;
+    font-family: var(--font-mono); font-size: 11px; font-weight: 800; color: var(--cyan);
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .modal-body { padding: 14px; display: flex; flex-direction: column; gap: 10px; font-family: var(--font-mono); font-size: 11px; }
+  .modal-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .modal-field { display: flex; flex-direction: column; gap: 4px; }
+  .modal-field label { color: var(--text-mid); font-size: 9.5px; font-weight: 700; }
+  .modal-field input, .modal-field select {
+    background: var(--screen-bg); border: 1px solid #040507; border-radius: 5px; padding: 6px 8px;
+    color: var(--text-hi); font-family: var(--font-mono); font-size: 11px; outline: none;
+    user-select: text; -webkit-user-select: text;
+  }
+  .bulk-preview-box { background: var(--screen-bg); border: 1px solid #040507; border-radius: 5px; padding: 8px; max-height: 150px; overflow-y: auto; font-size: 10px; line-height: 1.5; }
+  .bulk-row { display: flex; justify-content: space-between; gap: 8px; border-bottom: 1px solid rgba(255,255,255,0.04); padding: 2px 0; }
+  .bulk-old { color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 45%; }
+  .bulk-new { color: var(--emerald); font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 50%; }
+  .modal-foot { padding: 10px 14px; background: #13171e; border-top: 1px solid #06080b; display: flex; justify-content: flex-end; gap: 8px; }
+  .hidden-input { display: none; }
+</style>
+</head>
+<body>
+<div class="app-shell">
+
+  <!-- ==================== GLOBAL HARDWARE MASTER CONSOLE ==================== -->
+  <header class="master-bar">
+    <div class="brand-plate">
+      <span class="brand-title">NEXUS <em>MP4</em> <span>FOUNDRY</span></span>
+    </div>
+
+    <div class="master-menus">
+      <div class="menu-trigger" data-sys-menu="sys">SYSTEM
+        <div class="menu-dropdown">
+          <div class="menu-item" data-sact="forge-demo">Forge Synth Drum Kit (Active Tile)<span class="k">DEMO</span></div>
+          <div class="menu-sep"></div>
+          <div class="menu-item" data-sact="swap-tiles">Swap Tile A &harr; Tile B Paths<span class="k">SWAP</span></div>
+          <div class="menu-item" data-sact="mirror-ab">Sync Tile B to Tile A Path<span class="k">SYNC</span></div>
+          <div class="menu-item" data-sact="reset-split">Reset 50/50 Split Divider<span class="k">50/50</span></div>
+          <div class="menu-sep"></div>
+          <div class="menu-item" data-sact="export-vfs">Export Full VFS Snapshot .ZIP<span class="k">ALL</span></div>
+          <div class="menu-item danger" data-sact="wipe-vfs">Reset VFS Workspace<span class="k">WIPE</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="knob-rack">
+      <div class="knob-unit" id="volKnob" title="Master Gain (Drag Up/Down, Dbl-Click 85%)">
+        <div class="knob-cap"><div class="knob-indicator" id="knobIndVol"></div></div>
+        <div class="knob-readout"><span class="knob-name">GAIN</span><span class="knob-val" id="knobValVol">85%</span></div>
+      </div>
+    </div>
+
+    <div class="meter-rack" title="Stereo Peak Meter (Click Red LED to Reset Clip)">
+      <canvas id="masterMeterCanvas" width="92" height="20"></canvas>
+      <div class="clip-led" id="clipLed"></div>
+    </div>
+
+    <div class="master-right">
+      <button class="rubber-btn" id="btnUndo" title="Undo (Ctrl+Z)" disabled>&#8630; UNDO</button>
+      <button class="rubber-btn" id="btnRedo" title="Redo (Ctrl+Y)" disabled>&#8631;</button>
+      <button class="rubber-btn glow-cyan" id="btnMono" title="Mono Mode: New audition cuts previous voice"><span class="led-slit cyan" id="ledMono"></span>MONO</button>
+      <button class="rubber-btn" id="btnLoop" title="Loop playback"><span class="led-slit" id="ledLoop"></span>LOOP</button>
+      <button class="rubber-btn" id="panicBtn" title="Stop All Audio & Video (ESC)"><span class="led-slit" id="ledPanic"></span>PANIC <span class="kbd-tag">ESC</span></button>
+    </div>
+  </header>
+
+  <!-- ==================== DUAL-TILE WORKSPACE ==================== -->
+  <main class="dual-workspace" id="dualWorkspace">
+
+    <!-- TILE A -->
+    <section class="tile focused" data-tile="A" id="tileA">
+      <div class="tile-menubar">
+        <div class="tile-tag"><span class="led-slit cyan"></span>TILE A</div>
+        <div class="menu-trigger" data-menu="file" data-tile="A">FILE
+          <div class="menu-dropdown">
+            <div class="menu-item" data-act="import-files">Load Media (MP4 / IMG / AUD / ZIP)...<span class="k">FILE</span></div>
+            <div class="menu-item" data-act="import-folder">Load Local Directory...<span class="k">DIR</span></div>
+            <div class="menu-item" data-act="forge-demo">Forge Synth Drum Kit Here<span class="k">DEMO</span></div>
+            <div class="menu-sep"></div>
+            <div class="menu-item" data-act="new-folder">New Folder<span class="k">Ctrl+Shift+N</span></div>
+            <div class="menu-item" data-act="new-zip">New .ZIP Archive Folder<span class="k">.ZIP</span></div>
+            <div class="menu-item" data-act="zip-selected">Pack Selection into .ZIP<span class="k">PACK</span></div>
+            <div class="menu-sep"></div>
+            <div class="menu-item" data-act="export-zip">Download Selected .ZIP<span class="k">.ZIP</span></div>
+            <div class="menu-item" data-act="export-file">Save Selected File(s)<span class="k">SAVE</span></div>
+          </div>
+        </div>
+        <div class="menu-trigger" data-menu="edit" data-tile="A">EDIT
+          <div class="menu-dropdown">
+            <div class="menu-item" data-act="cut">Cut Selected<span class="k">Ctrl+X</span></div>
+            <div class="menu-item" data-act="copy">Copy Selected<span class="k">Ctrl+C</span></div>
+            <div class="menu-item" data-act="paste">Paste Here<span class="k">Ctrl+V</span></div>
+            <div class="menu-item" data-act="duplicate">Duplicate<span class="k">Ctrl+D</span></div>
+            <div class="menu-item accent" data-act="rename">Rename / Bulk Rename...<span class="k">F2</span></div>
+            <div class="menu-item danger" data-act="delete">Delete Selected<span class="k">Del</span></div>
+            <div class="menu-sep"></div>
+            <div class="menu-item" data-act="copy-other">Copy Selection &rarr; Tile B</div>
+            <div class="menu-item" data-act="move-other">Move Selection &rarr; Tile B</div>
+            <div class="menu-item accent" data-act="merge-chain">Merge Audio &rarr; Sample Chain<span class="k">CHAIN</span></div>
+            <div class="menu-sep"></div>
+            <div class="menu-item" data-act="select-all">Select All<span class="k">Ctrl+A</span></div>
+            <div class="menu-item" data-act="invert-sel">Invert Selection</div>
+            <div class="menu-sep"></div>
+            <div class="menu-item" data-act="dsp-normalize">Batch Normalize (-0.5dB)</div>
+            <div class="menu-item" data-act="dsp-autotrim">Batch Auto-Trim Silence</div>
+            <div class="menu-item" data-act="dsp-mono">Batch Sum to Mono</div>
+            <div class="menu-item" data-act="dsp-reverse">Batch Reverse Audio</div>
+          </div>
+        </div>
+        <div class="menu-trigger" data-menu="view" data-tile="A">VIEW
+          <div class="menu-dropdown">
+            <div class="menu-item" data-act="view-grid">Thumbnail Grid<span class="k">GRID</span></div>
+            <div class="menu-item" data-act="view-list">Compact List<span class="k">LIST</span></div>
+            <div class="menu-sep"></div>
+            <div class="menu-item" data-act="sort-name">Sort by Name</div>
+            <div class="menu-item" data-act="sort-type">Sort by Media Type</div>
+            <div class="menu-item" data-act="sort-dur">Sort by Duration</div>
+            <div class="menu-item" data-act="sort-size">Sort by Size</div>
+            <div class="menu-sep"></div>
+            <div class="menu-item" data-act="theme-cyan">Wave Tint: Cyan</div>
+            <div class="menu-item" data-act="theme-amber">Wave Tint: Amber</div>
+            <div class="menu-item" data-act="theme-emerald">Wave Tint: Emerald</div>
+            <div class="menu-item" data-act="theme-crimson">Wave Tint: Crimson</div>
+            <div class="menu-sep"></div>
+            <div class="menu-item" data-act="go-up">Parent Folder<span class="k">Bksp</span></div>
+            <div class="menu-item" data-act="go-root">Root Directory<span class="k">/</span></div>
+          </div>
+        </div>
+        <div class="tile-quick-actions">
+          <button class="mini-rubber" data-quick="up" data-tile="A" title="Parent Folder">..</button>
+          <button class="mini-rubber zip-accent" data-quick="new-zip" data-tile="A" title="New .ZIP Archive">+ZIP</button>
+          <button class="mini-rubber" data-quick="new-folder" data-tile="A" title="New Folder">+DIR</button>
+          <button class="mini-rubber" data-quick="toggle-view" data-tile="A" title="Toggle Grid/List">VIEW</button>
+        </div>
+      </div>
+
+      <div class="tile-pathbar">
+        <div class="breadcrumbs" id="crumbsA"></div>
+        <div class="filter-chips" id="chipsA">
+          <button class="fchip active" data-chip="all" data-tile="A">ALL</button>
+          <button class="fchip" data-chip="sample" data-tile="A">AUD</button>
+          <button class="fchip" data-chip="video" data-tile="A">VID</button>
+          <button class="fchip" data-chip="image" data-tile="A">IMG</button>
+          <button class="fchip" data-chip="zip" data-tile="A">ZIP</button>
+        </div>
+        <input type="text" class="tile-search" id="searchA" placeholder="FILTER...">
+      </div>
+
+      <div class="tile-body" id="bodyA" data-tile="A">
+        <div class="item-grid" id="gridA"></div>
+        <div class="marquee-box" id="marqueeA"></div>
+      </div>
+
+      <div class="tile-footer">
+        <span id="statusLeftA">0 items</span>
+        <span>R-CLICK GROUP FOR BULK OPS // DRAG=COPY</span>
+      </div>
+    </section>
+
+    <div class="split-rail" id="splitRail" title="Drag to Resize (Dbl-Click Reset 50/50)"></div>
+
+    <!-- TILE B -->
+    <section class="tile" data-tile="B" id="tileB">
+      <div class="tile-menubar">
+        <div class="tile-tag"><span class="led-slit amber"></span>TILE B</div>
+        <div class="menu-trigger" data-menu="file" data-tile="B">FILE
+          <div class="menu-dropdown">
+            <div class="menu-item" data-act="import-files">Load Media (MP4 / IMG / AUD / ZIP)...<span class="k">FILE</span></div>
+            <div class="menu-item" data-act="import-folder">Load Local Directory...<span class="k">DIR</span></div>
+            <div class="menu-item" data-act="forge-demo">Forge Synth Drum Kit Here<span class="k">DEMO</span></div>
+            <div class="menu-sep"></div>
+            <div class="menu-item" data-act="new-folder">New Folder<span class="k">Ctrl+Shift+N</span></div>
+            <div class="menu-item" data-act="new-zip">New .ZIP Archive Folder<span class="k">.ZIP</span></div>
+            <div class="menu-item" data-act="zip-selected">Pack Selection into .ZIP<span class="k">PACK</span></div>
+            <div class="menu-sep"></div>
+            <div class="menu-item" data-act="export-zip">Download Selected .ZIP<span class="k">.ZIP</span></div>
+            <div class="menu-item" data-act="export-file">Save Selected File(s)<span class="k">SAVE</span></div>
+          </div>
+        </div>
+        <div class="menu-trigger" data-menu="edit" data-tile="B">EDIT
+          <div class="menu-dropdown">
+            <div class="menu-item" data-act="cut">Cut Selected<span class="k">Ctrl+X</span></div>
+            <div class="menu-item" data-act="copy">Copy Selected<span class="k">Ctrl+C</span></div>
+            <div class="menu-item" data-act="paste">Paste Here<span class="k">Ctrl+V</span></div>
+            <div class="menu-item" data-act="duplicate">Duplicate<span class="k">Ctrl+D</span></div>
+            <div class="menu-item accent" data-act="rename">Rename / Bulk Rename...<span class="k">F2</span></div>
+            <div class="menu-item danger" data-act="delete">Delete Selected<span class="k">Del</span></div>
+            <div class="menu-sep"></div>
+            <div class="menu-item" data-act="copy-other">Copy Selection &rarr; Tile A</div>
+            <div class="menu-item" data-act="move-other">Move Selection &rarr; Tile A</div>
+            <div class="menu-item accent" data-act="merge-chain">Merge Audio &rarr; Sample Chain<span class="k">CHAIN</span></div>
+            <div class="menu-sep"></div>
+            <div class="menu-item" data-act="select-all">Select All<span class="k">Ctrl+A</span></div>
+            <div class="menu-item" data-act="invert-sel">Invert Selection</div>
+            <div class="menu-sep"></div>
+            <div class="menu-item" data-act="dsp-normalize">Batch Normalize (-0.5dB)</div>
+            <div class="menu-item" data-act="dsp-autotrim">Batch Auto-Trim Silence</div>
+            <div class="menu-item" data-act="dsp-mono">Batch Sum to Mono</div>
+            <div class="menu-item" data-act="dsp-reverse">Batch Reverse Audio</div>
+          </div>
+        </div>
+        <div class="menu-trigger" data-menu="view" data-tile="B">VIEW
+          <div class="menu-dropdown">
+            <div class="menu-item" data-act="view-grid">Thumbnail Grid<span class="k">GRID</span></div>
+            <div class="menu-item" data-act="view-list">Compact List<span class="k">LIST</span></div>
+            <div class="menu-sep"></div>
+            <div class="menu-item" data-act="sort-name">Sort by Name</div>
+            <div class="menu-item" data-act="sort-type">Sort by Media Type</div>
+            <div class="menu-item" data-act="sort-dur">Sort by Duration</div>
+            <div class="menu-item" data-act="sort-size">Sort by Size</div>
+            <div class="menu-sep"></div>
+            <div class="menu-item" data-act="theme-cyan">Wave Tint: Cyan</div>
+            <div class="menu-item" data-act="theme-amber">Wave Tint: Amber</div>
+            <div class="menu-item" data-act="theme-emerald">Wave Tint: Emerald</div>
+            <div class="menu-item" data-act="theme-crimson">Wave Tint: Crimson</div>
+            <div class="menu-sep"></div>
+            <div class="menu-item" data-act="go-up">Parent Folder<span class="k">Bksp</span></div>
+            <div class="menu-item" data-act="go-root">Root Directory<span class="k">/</span></div>
+          </div>
+        </div>
+        <div class="tile-quick-actions">
+          <button class="mini-rubber" data-quick="up" data-tile="B" title="Parent Folder">..</button>
+          <button class="mini-rubber zip-accent" data-quick="new-zip" data-tile="B" title="New .ZIP Archive">+ZIP</button>
+          <button class="mini-rubber" data-quick="new-folder" data-tile="B" title="New Folder">+DIR</button>
+          <button class="mini-rubber" data-quick="toggle-view" data-tile="B" title="Toggle Grid/List">VIEW</button>
+        </div>
+      </div>
+
+      <div class="tile-pathbar">
+        <div class="breadcrumbs" id="crumbsB"></div>
+        <div class="filter-chips" id="chipsB">
+          <button class="fchip active" data-chip="all" data-tile="B">ALL</button>
+          <button class="fchip" data-chip="sample" data-tile="B">AUD</button>
+          <button class="fchip" data-chip="video" data-tile="B">VID</button>
+          <button class="fchip" data-chip="image" data-tile="B">IMG</button>
+          <button class="fchip" data-chip="zip" data-tile="B">ZIP</button>
+        </div>
+        <input type="text" class="tile-search" id="searchB" placeholder="FILTER...">
+      </div>
+
+      <div class="tile-body" id="bodyB" data-tile="B">
+        <div class="item-grid" id="gridB"></div>
+        <div class="marquee-box amber" id="marqueeB"></div>
+      </div>
+
+      <div class="tile-footer">
+        <span id="statusLeftB">0 items</span>
+        <span>DROP MEDIA ONTO .ZIP TO PACK ARCHIVE</span>
+      </div>
+    </section>
+  </main>
+
+  <!-- ==================== ADAPTIVE BOTTOM FOUNDRY DECK ==================== -->
+  <section class="wave-deck">
+
+    <!-- AUDIO DECK PANEL -->
+    <div class="deck-panel active" id="deckAudioPanel">
+      <div class="deck-toolbar">
+        <div class="deck-group">
+          <span class="deck-group-lbl">PLAY</span>
+          <button class="mini-rubber cyan-accent" id="deckPlayBtn" title="Audition from S Marker (Space)">&#9654; TRIG</button>
+          <button class="mini-rubber active-chip" id="deckZSnapBtn" title="Snap S/E & Chops to Zero-Crossings">Z-SNAP</button>
+          <button class="mini-rubber" id="deckResetTrimBtn" title="Reset Trim & Zoom">FULL</button>
+        </div>
+
+        <div class="deck-group">
+          <span class="deck-group-lbl">DSP</span>
+          <button class="mini-rubber" data-insp-dsp="crop" title="Commit S/E Trim Destructively">CROP</button>
+          <button class="mini-rubber" data-insp-dsp="autotrim" title="Strip Leading & Trailing Silence">SILENCE</button>
+          <button class="mini-rubber" data-insp-dsp="fadein" title="25ms Fade-In">F-IN</button>
+          <button class="mini-rubber" data-insp-dsp="fadeout" title="65ms Fade-Out">F-OUT</button>
+          <button class="mini-rubber" data-insp-dsp="normalize" title="Normalize (-0.5 dBFS)">NORM</button>
+          <button class="mini-rubber" data-insp-dsp="reverse" title="Reverse Sample">REV</button>
+          <button class="mini-rubber" data-insp-dsp="mono" title="Sum Stereo to Mono">MONO</button>
+          <button class="mini-rubber" data-insp-dsp="dc" title="Remove DC Offset">DC</button>
+        </div>
+
+        <div class="deck-group">
+          <span class="deck-group-lbl">CHOPS</span>
+          <button class="mini-rubber" id="deckAutoSliceBtn" title="Auto-Detect Transients">AUTO</button>
+          <input type="range" class="deck-slider" id="sliceSensSlider" min="10" max="90" value="48" title="Transient Sensitivity">
+          <button class="mini-rubber" data-grid-chop="4" title="4 Equal Chops">/4</button>
+          <button class="mini-rubber" data-grid-chop="8" title="8 Equal Chops">/8</button>
+          <button class="mini-rubber" data-grid-chop="16" title="16 Equal Chops">/16</button>
+          <button class="mini-rubber crimson-accent" id="deckClearChopsBtn" title="Clear Chops">CLR</button>
+          <button class="mini-rubber zip-accent" id="deckExplodeBtn" title="Export All Chops to Folder">EXPLODE</button>
+        </div>
+
+        <div class="deck-stats" id="deckStats">PEAK: <span>--</span> | CHOPS: <span>0</span></div>
+      </div>
+
+      <div class="big-wave-screen" id="inspectorWaveBox">
+        <canvas id="inspectorCanvas"></canvas>
+        <div class="big-wave-meta" id="inspTitle">NO MEDIA SELECTED — DROP MP4 / IMAGES / AUDIO / ZIP OR CLICK [DEMO]</div>
+        <div class="big-wave-zoom" id="inspZoomTag">1.0x</div>
+        <div class="big-wave-hint">CLICK=JUMP&amp;PLAY // DBL-CLICK=ADD CHOP // DRAG MARKERS // R-CLICK CHOP=DEL // KEYS 1-9=PADS // WHEEL=ZOOM</div>
+      </div>
+    </div>
+
+    <!-- VIDEO MONITOR DECK PANEL -->
+    <div class="deck-panel" id="deckVideoPanel">
+      <div class="deck-toolbar">
+        <div class="deck-group">
+          <span class="deck-group-lbl">VIDEO</span>
+          <button class="mini-rubber cyan-accent" id="vidPlayBtn">&#9654; PLAY / PAUSE</button>
+          <button class="mini-rubber zip-accent" id="vidExtractAudioBtn" title="Decode Video Audio Track into Active Tile as .WAV">EXTRACT AUDIO &rarr; WAV</button>
+          <button class="mini-rubber emerald-accent" id="vidGrabFrameBtn" title="Capture Current Video Frame into Active Tile as .PNG">GRAB FRAME &rarr; PNG</button>
+          <button class="mini-rubber" id="vidLightboxBtn">LIGHTBOX</button>
+          <button class="mini-rubber" id="vidSaveBtn">SAVE FILE</button>
+        </div>
+        <div class="deck-stats" id="vidMetaStats">VIDEO: <span>--</span></div>
+      </div>
+      <div class="media-stage">
+        <video id="deckVideoEl" controls playsinline></video>
+      </div>
+    </div>
+
+    <!-- IMAGE INSPECTOR DECK PANEL -->
+    <div class="deck-panel" id="deckImagePanel">
+      <div class="deck-toolbar">
+        <div class="deck-group">
+          <span class="deck-group-lbl">IMAGE</span>
+          <button class="mini-rubber emerald-accent" id="imgLightboxBtn">FULLSCREEN LIGHTBOX</button>
+          <button class="mini-rubber" id="imgRotateBtn">ROTATE 90&deg;</button>
+          <button class="mini-rubber" id="imgSaveBtn">SAVE IMAGE</button>
+        </div>
+        <div class="deck-stats" id="imgMetaStats">IMAGE: <span>--</span></div>
+      </div>
+      <div class="media-stage">
+        <img id="deckImgEl" alt="Preview" title="Click for Fullscreen Lightbox">
+      </div>
+    </div>
+
+  </section>
+</div>
+
+<input type="file" id="fileInputMedia" class="hidden-input" multiple accept="audio/*,video/*,image/*,.mp4,.m4v,.webm,.mov,.avi,.wav,.mp3,.ogg,.flac,.m4a,.jpg,.jpeg,.png,.webp,.gif,.zip">
+<input type="file" id="fileInputFolder" class="hidden-input" webkitdirectory directory multiple>
+<div class="ctx-menu" id="ctxMenu"></div>
+<div class="toast-bar" id="toastBar"></div>
+
+<!-- Lightbox Viewer -->
+<div class="lightbox-backdrop" id="lightboxBackdrop">
+  <div class="lightbox-content" id="lightboxContent"></div>
+</div>
+
+<!-- Dialog Modal -->
+<div class="modal-backdrop" id="modalBackdrop">
+  <div class="modal-box">
+    <div class="modal-head">
+      <span id="modalTitle">DIALOG</span>
+      <button class="mini-rubber" id="modalClose">X</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+    <div class="modal-foot">
+      <button class="rubber-btn" id="modalCancel">CANCEL</button>
+      <button class="rubber-btn glow-cyan" id="modalConfirm">OK</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  'use strict';
+
+  /* =====================================================================
+     WEB AUDIO ENGINE (PURE CLEAN PATH: GAIN + STEREO METER, ZERO IDLE CPU)
+  ===================================================================== */
+  var AudioCtx = window.AudioContext || window.webkitAudioContext;
+  var audioCtx = new AudioCtx();
+  var masterGain = audioCtx.createGain();
+  masterGain.gain.value = 0.85;
+
+  var splitter = audioCtx.createChannelSplitter(2);
+  var analyserL = audioCtx.createAnalyser();
+  var analyserR = audioCtx.createAnalyser();
+  analyserL.fftSize = 256;
+  analyserR.fftSize = 256;
+
+  masterGain.connect(audioCtx.destination);
+  masterGain.connect(splitter);
+  splitter.connect(analyserL, 0);
+  splitter.connect(analyserR, 1);
+
+  var audioState = { volume: 0.85, monoMode: true, loopMode: false };
+  var activeVoices = new Map(), voiceSeq = 1, rafId = null, meterDecayFrames = 0;
+  var peakHoldL = 0, peakHoldR = 0;
+  var meterBufL = new Float32Array(analyserL.fftSize);
+  var meterBufR = new Float32Array(analyserR.fftSize);
+
+  var toastTimer = null;
+  function showToast(msg, isErr) {
+    var el = document.getElementById('toastBar');
+    el.textContent = msg;
+    el.className = 'toast-bar show' + (isErr ? ' err' : '');
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(function() { el.classList.remove('show'); }, 2200);
+  }
+
+  /* =====================================================================
+     ZERO-DEPENDENCY .ZIP ENGINE (ENCODE + DECODE ALL MEDIA TYPES)
+  ===================================================================== */
+  var CRC_TABLE = new Uint32Array(256);
+  for (var ci = 0; ci < 256; ci++) {
+    var cc = ci;
+    for (var ck = 0; ck < 8; ck++) cc = (cc & 1) ? (0xEDB88320 ^ (cc >>> 1)) : (cc >>> 1);
+    CRC_TABLE[ci] = cc >>> 0;
+  }
+  function crc32(bytes) {
+    var crc = 0xFFFFFFFF;
+    for (var j = 0; j < bytes.length; j++) crc = CRC_TABLE[(crc ^ bytes[j]) & 0xFF] ^ (crc >>> 8);
+    return (crc ^ 0xFFFFFFFF) >>> 0;
+  }
+
+  function buildZipBlob(entries) {
+    var enc = new TextEncoder(), localParts = [], centralParts = [], offset = 0;
+    for (var i = 0; i < entries.length; i++) {
+      var nameBytes = enc.encode(entries[i].path), data = entries[i].data, crc = crc32(data);
+      var lh = new ArrayBuffer(30 + nameBytes.length), lv = new DataView(lh);
+      lv.setUint32(0, 0x04034b50, true); lv.setUint16(4, 20, true); lv.setUint16(12, 0x5621, true);
+      lv.setUint32(14, crc, true); lv.setUint32(18, data.length, true); lv.setUint32(22, data.length, true);
+      lv.setUint16(26, nameBytes.length, true);
+      new Uint8Array(lh, 30).set(nameBytes);
+      localParts.push(new Uint8Array(lh), data);
+
+      var ch = new ArrayBuffer(46 + nameBytes.length), cv = new DataView(ch);
+      cv.setUint32(0, 0x02014b50, true); cv.setUint16(4, 20, true); cv.setUint16(6, 20, true); cv.setUint16(14, 0x5621, true);
+      cv.setUint32(16, crc, true); cv.setUint32(20, data.length, true); cv.setUint32(24, data.length, true);
+      cv.setUint16(28, nameBytes.length, true); cv.setUint32(42, offset, true);
+      new Uint8Array(ch, 46).set(nameBytes);
+      centralParts.push(new Uint8Array(ch));
+      offset += 30 + nameBytes.length + data.length;
+    }
+    var centralSize = 0;
+    for (var p = 0; p < centralParts.length; p++) centralSize += centralParts[p].length;
+    var eocd = new ArrayBuffer(22), ev = new DataView(eocd);
+    ev.setUint32(0, 0x06054b50, true); ev.setUint16(8, entries.length, true); ev.setUint16(10, entries.length, true);
+    ev.setUint32(12, centralSize, true); ev.setUint32(16, offset, true);
+    return new Blob(localParts.concat(centralParts, [new Uint8Array(eocd)]), { type: 'application/zip' });
+  }
+
+  async function parseZipBuffer(arrayBuffer) {
+    var bytes = new Uint8Array(arrayBuffer), view = new DataView(arrayBuffer), dec = new TextDecoder();
+    var eocdPos = -1;
+    for (var pos = bytes.length - 22; pos >= Math.max(0, bytes.length - 65558); pos--) {
+      if (view.getUint32(pos, true) === 0x06054b50) { eocdPos = pos; break; }
+    }
+    if (eocdPos < 0) throw new Error('Invalid ZIP');
+    var totalEntries = view.getUint16(eocdPos + 10, true), cdOff = view.getUint32(eocdPos + 16, true), files = [];
+    for (var idx = 0; idx < totalEntries; idx++) {
+      if (view.getUint32(cdOff, true) !== 0x02014b50) break;
+      var method = view.getUint16(cdOff + 10, true), compSize = view.getUint32(cdOff + 20, true);
+      var nameLen = view.getUint16(cdOff + 28, true), extraLen = view.getUint16(cdOff + 30, true);
+      var commentLen = view.getUint16(cdOff + 32, true), localOff = view.getUint32(cdOff + 42, true);
+      var name = dec.decode(bytes.subarray(cdOff + 46, cdOff + 46 + nameLen));
+      cdOff += 46 + nameLen + extraLen + commentLen;
+      if (name.endsWith('/')) continue;
+      var lNameLen = view.getUint16(localOff + 26, true), lExtraLen = view.getUint16(localOff + 28, true);
+      var dataStart = localOff + 30 + lNameLen + lExtraLen;
+      var rawSlice = bytes.subarray(dataStart, dataStart + compSize), outBuf = null;
+      if (method === 0) outBuf = rawSlice.slice().buffer;
+      else if (method === 8 && typeof DecompressionStream !== 'undefined') {
+        var ds = new DecompressionStream('deflate-raw'), writer = ds.writable.getWriter();
+        writer.write(rawSlice); writer.close();
+        outBuf = await new Response(ds.readable).arrayBuffer();
+      }
+      if (outBuf) files.push({ path: name, buffer: outBuf });
+    }
+    return files;
+  }
+
+  /* =====================================================================
+     VFS + UNDO / REDO ENGINE
+  ===================================================================== */
+  var vfs = new Map(), idCounter = 1, ROOT_ID = 'root';
+  function nextId(prefix) { return (prefix || 'n') + '_' + (idCounter++); }
+  vfs.set(ROOT_ID, { id: ROOT_ID, type: 'folder', name: 'ROOT', parentId: null });
+  function isContainer(n) { return Boolean(n && (n.type === 'folder' || n.type === 'zip')); }
+
+  var tiles = {
+    A: { id: 'A', cwd: ROOT_ID, selected: new Set(), lastClicked: null, viewMode: 'grid', sortBy: 'name', waveTheme: 'cyan', filter: '', chip: 'all' },
+    B: { id: 'B', cwd: ROOT_ID, selected: new Set(), lastClicked: null, viewMode: 'grid', sortBy: 'name', waveTheme: 'amber', filter: '', chip: 'all' }
+  };
+
+  var THEME_COLORS = {
+    cyan: { fill: '#38f6ff', head: '#ffffff', trail: 'rgba(56, 246, 255, 0.30)' },
+    amber: { fill: '#ffc13b', head: '#fff8e0', trail: 'rgba(255, 193, 59, 0.30)' },
+    emerald: { fill: '#35ff9b', head: '#ebfff4', trail: 'rgba(53, 255, 155, 0.30)' },
+    crimson: { fill: '#ff3b5c', head: '#ffe8ec', trail: 'rgba(255, 59, 92, 0.30)' }
+  };
+
+  var activeTileId = 'A', inspectedNodeId = null;
+  var clipboard = { mode: null, ids: [] };
+  var dragState = null;
+  var sampleCanvases = new Map();
+
+  var inspState = {
+    zoom: 1.0, scrollNorm: 0.0, zeroSnap: true, sliceSens: 0.48,
+    hoverSliceIdx: -1, draggingType: null, draggingSliceIdx: -1, activeSliceIdx: -1
+  };
+
+  var undoStack = [], redoStack = [], MAX_UNDO = 30;
+  function updateUndoButtons() {
+    document.getElementById('btnUndo').disabled = undoStack.length === 0;
+    document.getElementById('btnRedo').disabled = redoStack.length === 0;
+  }
+  function pushUndo(act) {
+    undoStack.push(act); if (undoStack.length > MAX_UNDO) undoStack.shift();
+    redoStack.length = 0; updateUndoButtons();
+  }
+  function performUndo() {
+    if (!undoStack.length) return;
+    var act = undoStack.pop(); act.undo(); redoStack.push(act);
+    updateUndoButtons(); renderAll(); showToast('UNDO: ' + act.label);
+  }
+  function performRedo() {
+    if (!redoStack.length) return;
+    var act = redoStack.pop(); act.redo(); undoStack.push(act);
+    updateUndoButtons(); renderAll(); showToast('REDO: ' + act.label);
+  }
+
+  /* =====================================================================
+     HELPERS, THUMBNAIL GENERATORS (IMG & VIDEO), AUDIO ANALYSIS
+  ===================================================================== */
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, function(m) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m];
+    });
+  }
+  function formatDuration(sec) {
+    if (!sec || isNaN(sec)) return '0.0s';
+    if (sec < 10) return sec.toFixed(2) + 's';
+    var m = Math.floor(sec / 60), s = Math.floor(sec % 60);
+    return m > 0 ? (m + ':' + String(s).padStart(2, '0')) : (sec.toFixed(1) + 's');
+  }
+  function formatBytes(bytes) {
+    if (!bytes) return '0B';
+    if (bytes < 1024) return bytes + 'B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(0) + 'K';
+    return (bytes / (1024 * 1024)).toFixed(1) + 'M';
+  }
+
+  function guessMime(name, fallback) {
+    var ext = (name.split('.').pop() || '').toLowerCase();
+    var map = {
+      jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp', gif: 'image/gif', bmp: 'image/bmp', svg: 'image/svg+xml',
+      mp4: 'video/mp4', m4v: 'video/mp4', webm: 'video/webm', mov: 'video/quicktime', avi: 'video/x-msvideo', mkv: 'video/x-matroska',
+      wav: 'audio/wav', mp3: 'audio/mpeg', ogg: 'audio/ogg', flac: 'audio/flac', m4a: 'audio/mp4'
+    };
+    return map[ext] || fallback || 'application/octet-stream';
+  }
+  function isImageExt(name) { return /\.(jpe?g|png|webp|gif|bmp|svg|avif)$/i.test(name); }
+  function isVideoExt(name) { return /\.(mp4|m4v|webm|mov|avi|mkv|ogv)$/i.test(name); }
+
+  function generateImageThumb(blob, url) {
+    return new Promise(function(resolve) {
+      var img = new Image();
+      img.onload = function() {
+        var tw = 220, th = 120;
+        var ratio = Math.min(tw / Math.max(1, img.naturalWidth), th / Math.max(1, img.naturalHeight), 1);
+        var cw = Math.max(2, Math.round(img.naturalWidth * ratio));
+        var ch = Math.max(2, Math.round(img.naturalHeight * ratio));
+        var c = document.createElement('canvas'); c.width = cw; c.height = ch;
+        c.getContext('2d').drawImage(img, 0, 0, cw, ch);
+        var thumbUrl = url;
+        try { thumbUrl = c.toDataURL('image/jpeg', 0.82); } catch (e) {}
+        resolve({ width: img.naturalWidth, height: img.naturalHeight, thumbUrl: thumbUrl });
+      };
+      img.onerror = function() { resolve({ width: 0, height: 0, thumbUrl: url }); };
+      img.src = url;
+    });
+  }
+
+  function generateVideoThumb(url) {
+    return new Promise(function(resolve) {
+      var vid = document.createElement('video');
+      vid.muted = true; vid.playsInline = true; vid.preload = 'auto';
+      var done = false;
+      function finish(res) {
+        if (done) return; done = true;
+        clearTimeout(timer);
+        vid.onloadedmetadata = null; vid.onseeked = null; vid.onerror = null;
+        vid.removeAttribute('src'); vid.load();
+        resolve(res);
+      }
+      var timer = setTimeout(function() { finish({ width: vid.videoWidth || 0, height: vid.videoHeight || 0, duration: vid.duration || 0, thumbUrl: null }); }, 2800);
+      vid.onerror = function() { finish({ width: 0, height: 0, duration: 0, thumbUrl: null }); };
+      vid.onloadedmetadata = function() {
+        var dur = isFinite(vid.duration) ? vid.duration : 0;
+        vid.currentTime = dur > 0.4 ? Math.min(dur * 0.12, 1.5) : 0;
+      };
+      vid.onseeked = function() {
+        var vw = vid.videoWidth || 160, vh = vid.videoHeight || 90;
+        var ratio = Math.min(220 / vw, 120 / vh, 1);
+        var c = document.createElement('canvas');
+        c.width = Math.max(2, Math.round(vw * ratio)); c.height = Math.max(2, Math.round(vh * ratio));
+        var thumb = null;
+        try { c.getContext('2d').drawImage(vid, 0, 0, c.width, c.height); thumb = c.toDataURL('image/jpeg', 0.8); } catch (e) {}
+        finish({ width: vw, height: vh, duration: isFinite(vid.duration) ? vid.duration : 0, thumbUrl: thumb });
+      };
+      vid.src = url;
+    });
+  }
+
+  function computePeaks(buf, buckets) {
+    buckets = buckets || 180;
+    var ch0 = buf.getChannelData(0), ch1 = buf.numberOfChannels > 1 ? buf.getChannelData(1) : ch0;
+    var len = ch0.length, step = Math.max(1, Math.floor(len / buckets)), peaks = new Float32Array(buckets * 2);
+    for (var b = 0; b < buckets; b++) {
+      var start = b * step, end = Math.min(len, start + step), min = 1, max = -1;
+      var stride = Math.max(1, Math.floor((end - start) / 40));
+      for (var j = start; j < end; j += stride) { var v = (ch0[j] + ch1[j]) * 0.5; if (v < min) min = v; if (v > max) max = v; }
+      if (min > max) { min = 0; max = 0; }
+      peaks[b * 2] = min; peaks[b * 2 + 1] = max;
+    }
+    return peaks;
+  }
+
+  function calcPeakDb(buf) {
+    var peak = 0, stride = Math.max(1, Math.floor(buf.length / 30000));
+    for (var ch = 0; ch < buf.numberOfChannels; ch++) {
+      var d = buf.getChannelData(ch);
+      for (var i = 0; i < d.length; i += stride) { var a = Math.abs(d[i]); if (a > peak) peak = a; }
+    }
+    return peak > 1e-5 ? (20 * Math.log10(peak)).toFixed(1) + 'dB' : '-inf';
+  }
+
+  function snapToZeroCrossing(buf, normPos) {
+    var d = buf.getChannelData(0), idx = Math.max(0, Math.min(d.length - 2, Math.floor(normPos * d.length)));
+    if (!inspState.zeroSnap) return idx / d.length;
+    var bestIdx = idx, bestDist = 999999, radius = Math.min(300, Math.floor(d.length * 0.02));
+    for (var i = Math.max(0, idx - radius); i <= Math.min(d.length - 2, idx + radius); i++) {
+      if ((d[i] <= 0 && d[i + 1] > 0) || (d[i] >= 0 && d[i + 1] < 0)) {
+        var dist = Math.abs(i - idx); if (dist < bestDist) { bestDist = dist; bestIdx = i; }
+      }
+    }
+    return bestIdx / d.length;
+  }
+
+  function detectTransients(buf, sens, minNorm, maxNorm) {
+    var ch0 = buf.getChannelData(0), sr = buf.sampleRate;
+    var hop = Math.max(64, Math.floor(sr * 0.008)), frames = Math.floor(ch0.length / hop);
+    if (frames < 4) return [];
+    var env = new Float32Array(frames);
+    for (var f = 0; f < frames; f++) {
+      var start = f * hop, sum = 0; for (var s = 0; s < hop; s++) { var v = ch0[start + s]; sum += v * v; }
+      env[f] = Math.sqrt(sum / hop);
+    }
+    var flux = new Float32Array(frames), maxFlux = 0;
+    for (var f2 = 1; f2 < frames; f2++) { var diff = env[f2] - env[f2 - 1]; flux[f2] = diff > 0 ? diff : 0; if (flux[f2] > maxFlux) maxFlux = flux[f2]; }
+    if (maxFlux < 0.004) return [];
+    var thresh = maxFlux * (1.02 - sens) * 0.55, minGap = Math.max(4, Math.floor(0.06 / 0.008));
+    var slices = [], lastF = -minGap;
+    for (var f3 = 1; f3 < frames - 1; f3++) {
+      if (flux[f3] >= thresh && flux[f3] >= flux[f3 - 1] && flux[f3] >= flux[f3 + 1] && (f3 - lastF >= minGap)) {
+        var norm = (f3 * hop) / ch0.length;
+        if (norm > minNorm + 0.01 && norm < maxNorm - 0.01) { slices.push(snapToZeroCrossing(buf, norm)); lastF = f3; }
+      }
+    }
+    return slices;
+  }
+
+  function getSliceRegions(node) {
+    if (!node || node.type !== 'sample') return [];
+    var pts = [node.trimStart], sorted = (node.slices || []).slice().sort(function(a, b) { return a - b; });
+    for (var i = 0; i < sorted.length; i++) if (sorted[i] > node.trimStart + 0.003 && sorted[i] < node.trimEnd - 0.003) pts.push(sorted[i]);
+    pts.push(node.trimEnd);
+    var regions = [];
+    for (var r = 0; r < pts.length - 1; r++) regions.push({ start: pts[r], end: pts[r + 1], index: r });
+    return regions;
+  }
+
+  function setNodeSlicesWithUndo(node, nextSlices, label) {
+    var prev = (node.slices || []).slice(), clean = nextSlices.slice().sort(function(a, b) { return a - b; });
+    node.slices = clean;
+    pushUndo({ label: label, undo: function() { node.slices = prev.slice(); }, redo: function() { node.slices = clean.slice(); } });
+    drawInspectorWaveform(); redrawSampleWaveforms(node.id);
+  }
+
+  /* =====================================================================
+     VFS NODE FACTORIES & MUTATIONS
+  ===================================================================== */
+  function createFolder(name, parentId) {
+    var node = { id: nextId('dir'), type: 'folder', name: name.trim() || 'NEW_FOLDER', parentId: parentId };
+    vfs.set(node.id, node); return node;
+  }
+  function createZipFolder(name, parentId) {
+    var clean = name.trim() || 'PACK.zip';
+    if (!clean.toLowerCase().endsWith('.zip')) clean += '.zip';
+    var node = { id: nextId('zip'), type: 'zip', name: clean, parentId: parentId };
+    vfs.set(node.id, node); return node;
+  }
+  function createSampleNode(name, parentId, audioBuffer, initialSlices) {
+    var node = {
+      id: nextId('smp'), type: 'sample', name: name, parentId: parentId,
+      buffer: audioBuffer, peaks: computePeaks(audioBuffer, 180), peakDb: calcPeakDb(audioBuffer),
+      duration: audioBuffer.duration, sampleRate: audioBuffer.sampleRate, channels: audioBuffer.numberOfChannels,
+      sizeBytes: audioBuffer.length * audioBuffer.numberOfChannels * 2 + 44,
+      trimStart: 0, trimEnd: 1, slices: initialSlices ? initialSlices.slice() : []
+    };
+    vfs.set(node.id, node); return node;
+  }
+  function createImageNode(name, parentId, blob, meta, url) {
+    var node = {
+      id: nextId('img'), type: 'image', name: name, parentId: parentId,
+      blob: blob, url: url || URL.createObjectURL(blob), thumbUrl: meta.thumbUrl || url,
+      width: meta.width || 0, height: meta.height || 0, sizeBytes: blob.size, mime: blob.type || guessMime(name, 'image/png')
+    };
+    vfs.set(node.id, node); return node;
+  }
+  function createVideoNode(name, parentId, blob, meta, url) {
+    var node = {
+      id: nextId('vid'), type: 'video', name: name, parentId: parentId,
+      blob: blob, url: url || URL.createObjectURL(blob), thumbUrl: meta.thumbUrl || null,
+      width: meta.width || 0, height: meta.height || 0, duration: meta.duration || 0,
+      sizeBytes: blob.size, mime: blob.type || guessMime(name, 'video/mp4')
+    };
+    vfs.set(node.id, node); return node;
+  }
+
+  function refreshSampleMeta(node) {
+    node.peaks = computePeaks(node.buffer, 180); node.peakDb = calcPeakDb(node.buffer);
+    node.duration = node.buffer.duration; node.sampleRate = node.buffer.sampleRate;
+    node.channels = node.buffer.numberOfChannels;
+    node.sizeBytes = node.buffer.length * node.buffer.numberOfChannels * 2 + 44;
+  }
+  function cloneAudioBuffer(src) {
+    var out = audioCtx.createBuffer(src.numberOfChannels, src.length, src.sampleRate);
+    for (var ch = 0; ch < src.numberOfChannels; ch++) out.copyToChannel(new Float32Array(src.getChannelData(ch)), ch);
+    return out;
+  }
+  function getChildren(cid) { var list = []; vfs.forEach(function(n) { if (n.parentId === cid) list.push(n); }); return list; }
+  function makeUniqueName(baseName, targetFolderId, ignoreId) {
+    var existing = new Set();
+    getChildren(targetFolderId).forEach(function(s) { if (s.id !== ignoreId) existing.add(s.name.toLowerCase()); });
+    if (!existing.has(baseName.toLowerCase())) return baseName;
+    var dot = baseName.lastIndexOf('.'), stem = dot > 0 ? baseName.slice(0, dot) : baseName, ext = dot > 0 ? baseName.slice(dot) : '';
+    var num = 2; while (existing.has((stem + '_' + num + ext).toLowerCase())) num++;
+    return stem + '_' + num + ext;
+  }
+  function getContainerStats(cid) {
+    var items = 0, media = 0, bytes = 0;
+    function walk(id) {
+      vfs.forEach(function(n) {
+        if (n.parentId === id) {
+          items++;
+          if (!isContainer(n)) { media++; bytes += n.sizeBytes || 0; } else walk(n.id);
+        }
+      });
+    }
+    walk(cid); return { items: items, media: media, bytes: bytes };
+  }
+  function findEnclosingZip(id) { var c = vfs.get(id); while (c) { if (c.type === 'zip') return c; c = c.parentId ? vfs.get(c.parentId) : null; } return null; }
+  function isDescendant(childId, ancId) { var c = vfs.get(childId); while (c) { if (c.id === ancId) return true; c = c.parentId ? vfs.get(c.parentId) : null; } return false; }
+  function getPathChain(id) { var ch = [], c = vfs.get(id); while (c) { ch.unshift(c); c = c.parentId ? vfs.get(c.parentId) : null; } return ch; }
+
+  function cloneNodeRecursive(nodeId, targetParentId, forceSuffix) {
+    var orig = vfs.get(nodeId); if (!orig) return null;
+    var desired = orig.name;
+    if (forceSuffix) {
+      var dot = orig.name.lastIndexOf('.');
+      desired = dot > 0 ? (orig.name.slice(0, dot) + forceSuffix + orig.name.slice(dot)) : (orig.name + forceSuffix);
+    }
+    var finalName = makeUniqueName(desired, targetParentId);
+    if (isContainer(orig)) {
+      var copyDir = orig.type === 'zip' ? createZipFolder(finalName, targetParentId) : createFolder(finalName, targetParentId);
+      getChildren(orig.id).forEach(function(k) { cloneNodeRecursive(k.id, copyDir.id, ''); });
+      return copyDir;
+    } else if (orig.type === 'sample') {
+      var c = createSampleNode(finalName, targetParentId, cloneAudioBuffer(orig.buffer), orig.slices);
+      c.trimStart = orig.trimStart; c.trimEnd = orig.trimEnd; return c;
+    } else if (orig.type === 'image') {
+      return createImageNode(finalName, targetParentId, orig.blob, { width: orig.width, height: orig.height, thumbUrl: orig.thumbUrl }, orig.url);
+    } else if (orig.type === 'video') {
+      return createVideoNode(finalName, targetParentId, orig.blob, { width: orig.width, height: orig.height, duration: orig.duration, thumbUrl: orig.thumbUrl }, orig.url);
+    }
+    return null;
+  }
+
+  function collectSubtreeNodes(id, out) {
+    var n = vfs.get(id); if (!n || n.id === ROOT_ID) return;
+    out.push(n); if (isContainer(n)) getChildren(n.id).forEach(function(k) { collectSubtreeNodes(k.id, out); });
+  }
+  function flashZipCard(zipId) {
+    requestAnimationFrame(function() {
+      document.querySelectorAll('.node-card[data-id="' + zipId + '"]').forEach(function(el) {
+        el.classList.add('zip-flash'); setTimeout(function() { el.classList.remove('zip-flash'); }, 400);
+      });
+    });
+  }
+
+  function deleteNodesWithUndo(ids) {
+    var removed = [], seen = new Set();
+    ids.forEach(function(id) { var list = []; collectSubtreeNodes(id, list); list.forEach(function(n) { if (!seen.has(n.id)) { seen.add(n.id); removed.push(n); } }); });
+    if (!removed.length) return;
+    function doDel() {
+      removed.forEach(function(n) {
+        if (n.type === 'sample') stopSampleVoices(n.id);
+        if (inspectedNodeId === n.id) { inspectedNodeId = null; stopVideoDeck(); }
+        if (isContainer(n)) ['A', 'B'].forEach(function(tid) { if (isDescendant(tiles[tid].cwd, n.id)) tiles[tid].cwd = n.parentId || ROOT_ID; });
+        vfs.delete(n.id); tiles.A.selected.delete(n.id); tiles.B.selected.delete(n.id);
+      });
+    }
+    function doRestore() { removed.forEach(function(n) { vfs.set(n.id, n); }); }
+    doDel(); pushUndo({ label: 'DELETE ' + ids.length, undo: doRestore, redo: doDel });
+    renderAll(); showToast('DELETED ' + ids.length + ' ITEM(S)');
+  }
+
+  function copyNodes(ids, targetFolderId) {
+    var created = [];
+    ids.forEach(function(id) {
+      var n = vfs.get(id); if (!n || n.id === ROOT_ID || n.parentId === targetFolderId) return;
+      if (isContainer(n) && isDescendant(targetFolderId, n.id)) return;
+      var c = cloneNodeRecursive(n.id, targetFolderId, ''); if (c) created.push(c);
+    });
+    if (!created.length) return;
+    var all = []; created.forEach(function(n) { collectSubtreeNodes(n.id, all); });
+    pushUndo({ label: 'COPY ' + created.length, undo: function() { all.forEach(function(n) { vfs.delete(n.id); }); }, redo: function() { all.forEach(function(n) { vfs.set(n.id, n); }); } });
+    var z = findEnclosingZip(targetFolderId); renderAll(); if (z) flashZipCard(z.id); showToast('COPIED ' + created.length + ' ITEM(S)');
+  }
+
+  function moveNodes(ids, targetFolderId) {
+    var recs = [];
+    ids.forEach(function(id) {
+      var n = vfs.get(id); if (!n || n.id === ROOT_ID || n.parentId === targetFolderId) return;
+      if (isContainer(n) && isDescendant(targetFolderId, n.id)) return;
+      recs.push({ node: n, oldP: n.parentId, oldN: n.name, newP: targetFolderId, newN: makeUniqueName(n.name, targetFolderId) });
+    });
+    if (!recs.length) return;
+    function applyM() { recs.forEach(function(r) { r.node.parentId = r.newP; r.node.name = r.newN; }); }
+    function revertM() { recs.forEach(function(r) { r.node.parentId = r.oldP; r.node.name = r.oldN; }); }
+    applyM(); pushUndo({ label: 'MOVE ' + recs.length, undo: revertM, redo: applyM });
+    var z = findEnclosingZip(targetFolderId); renderAll(); if (z) flashZipCard(z.id); showToast('MOVED ' + recs.length + ' ITEM(S)');
+  }
+
+  function mergeSelectedIntoChain(tileId, selNodes) {
+    var samples = selNodes.filter(function(n) { return n.type === 'sample'; });
+    if (samples.length < 2) { showToast('SELECT 2+ AUDIO SAMPLES TO MERGE', true); return; }
+    var sr = samples[0].buffer.sampleRate, maxCh = 1, totalFrames = 0, pad = Math.floor(sr * 0.015);
+    samples.forEach(function(s, idx) {
+      if (s.buffer.numberOfChannels > maxCh) maxCh = s.buffer.numberOfChannels;
+      totalFrames += Math.max(16, Math.floor((s.trimEnd - s.trimStart) * s.buffer.length)) + (idx < samples.length - 1 ? pad : 0);
+    });
+    var chainBuf = audioCtx.createBuffer(maxCh, totalFrames, sr), slices = [], cur = 0;
+    samples.forEach(function(s, idx) {
+      if (idx > 0) slices.push(cur / totalFrames);
+      var src = s.buffer, sIdx = Math.floor(s.trimStart * src.length), sLen = Math.max(16, Math.floor((s.trimEnd - s.trimStart) * src.length));
+      for (var ch = 0; ch < maxCh; ch++) {
+        var sCh = src.getChannelData(Math.min(ch, src.numberOfChannels - 1)), dCh = chainBuf.getChannelData(ch);
+        for (var i = 0; i < sLen && (cur + i) < totalFrames; i++) dCh[cur + i] = sCh[Math.min(src.length - 1, sIdx + i)];
+      }
+      cur += sLen + pad;
+    });
+    var node = createSampleNode(makeUniqueName('CHAIN_' + samples.length + 'HITS.wav', tiles[tileId].cwd), tiles[tileId].cwd, chainBuf, slices);
+    pushUndo({ label: 'MERGE CHAIN', undo: function() { vfs.delete(node.id); }, redo: function() { vfs.set(node.id, node); } });
+    inspectNode(node.id); renderAll(); showToast('FORGED ' + samples.length + '-HIT CHOPPED CHAIN');
+  }
+
+  /* =====================================================================
+     LIVE-PREVIEW BULK RENAME FOUNDRY (WORKS ON AUDIO, VIDEO, IMAGES, DIRS)
+  ===================================================================== */
+  function openBulkRenameModal(nodes) {
+    if (!nodes.length) return;
+    if (nodes.length === 1) {
+      var single = nodes[0];
+      openModal('RENAME ITEM', '<div class="modal-field"><label>NEW NAME</label><input type="text" id="mRenameVal" value="' + escapeHtml(single.name) + '"></div>',
+        function() {
+          var val = document.getElementById('mRenameVal').value.trim();
+          if (!val || val === single.name) return;
+          if (single.type === 'zip' && !val.toLowerCase().endsWith('.zip')) val += '.zip';
+          var prev = single.name, finalN = makeUniqueName(val, single.parentId, single.id);
+          single.name = finalN;
+          pushUndo({ label: 'RENAME', undo: function() { single.name = prev; }, redo: function() { single.name = finalN; } });
+          renderAll(); showToast('RENAMED TO ' + finalN);
+        });
+      return;
+    }
+
+    var bodyHtml =
+      '<div class="modal-grid-2">' +
+        '<div class="modal-field"><label>FIND TEXT</label><input type="text" id="brFind" placeholder="e.g. DSCF"></div>' +
+        '<div class="modal-field"><label>REPLACE WITH</label><input type="text" id="brRepl" placeholder="e.g. SCENE"></div>' +
+      '</div>' +
+      '<div class="modal-grid-2">' +
+        '<div class="modal-field"><label>PREFIX</label><input type="text" id="brPre" placeholder="e.g. REEL01_"></div>' +
+        '<div class="modal-field"><label>SUFFIX (BEFORE EXT)</label><input type="text" id="brSuf" placeholder="e.g. _FINAL"></div>' +
+      '</div>' +
+      '<div class="modal-grid-2">' +
+        '<div class="modal-field"><label>NUMBERING</label>' +
+          '<select id="brNumMode"><option value="none">None</option><option value="prefix">01_ Prefix</option><option value="suffix">_01 Suffix</option><option value="replace">Prefix + 01 (Replace Stem)</option></select>' +
+        '</div>' +
+        '<div class="modal-field"><label>CASE &amp; START #</label>' +
+          '<div style="display:flex;gap:4px;"><select id="brCase" style="flex:1;"><option value="keep">Keep</option><option value="upper">UPPER</option><option value="lower">lower</option></select>' +
+          '<input type="number" id="brStart" value="1" min="0" style="width:52px;"></div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="modal-field"><label>LIVE PREVIEW (' + nodes.length + ' ITEMS)</label><div class="bulk-preview-box" id="brPreview"></div></div>';
+
+    function computePlan() {
+      var find = document.getElementById('brFind').value, repl = document.getElementById('brRepl').value;
+      var pre = document.getElementById('brPre').value, suf = document.getElementById('brSuf').value;
+      var numMode = document.getElementById('brNumMode').value, caseMode = document.getElementById('brCase').value;
+      var startNum = parseInt(document.getElementById('brStart').value, 10); if (isNaN(startNum)) startNum = 1;
+      var padLen = Math.max(2, String(startNum + nodes.length).length);
+      return nodes.map(function(n, idx) {
+        var dot = (n.type !== 'folder' && n.name.lastIndexOf('.') > 0) ? n.name.lastIndexOf('.') : -1;
+        var stem = dot > 0 ? n.name.slice(0, dot) : n.name, ext = dot > 0 ? n.name.slice(dot) : '';
+        if (find) stem = stem.split(find).join(repl);
+        var numStr = String(startNum + idx).padStart(padLen, '0');
+        if (numMode === 'replace') stem = (pre || 'MEDIA_') + numStr + suf;
+        else {
+          stem = pre + stem + suf;
+          if (numMode === 'prefix') stem = numStr + '_' + stem;
+          else if (numMode === 'suffix') stem = stem + '_' + numStr;
+        }
+        if (caseMode === 'upper') stem = stem.toUpperCase();
+        else if (caseMode === 'lower') stem = stem.toLowerCase();
+        var outN = (stem.trim() || 'ITEM') + ext;
+        if (n.type === 'zip' && !outN.toLowerCase().endsWith('.zip')) outN += '.zip';
+        return { node: n, oldName: n.name, newName: outN };
+      });
+    }
+
+    function updatePreview() {
+      document.getElementById('brPreview').innerHTML = computePlan().map(function(r) {
+        return '<div class="bulk-row"><span class="bulk-old">' + escapeHtml(r.oldName) + '</span><span>&rarr;</span><span class="bulk-new">' + escapeHtml(r.newName) + '</span></div>';
+      }).join('');
+    }
+
+    openModal('BULK RENAME FOUNDRY (' + nodes.length + ' ITEMS)', bodyHtml, function() {
+      var plan = computePlan();
+      function applyB() { plan.forEach(function(r) { r.node.name = r.newName; }); }
+      function revertB() { plan.forEach(function(r) { r.node.name = r.oldName; }); }
+      applyB(); pushUndo({ label: 'BULK RENAME ' + plan.length, undo: revertB, redo: applyB });
+      renderAll(); showToast('BULK RENAMED ' + plan.length + ' ITEMS');
+    });
+
+    ['brFind', 'brRepl', 'brPre', 'brSuf', 'brNumMode', 'brCase', 'brStart'].forEach(function(id) {
+      var el = document.getElementById(id); if (el) { el.addEventListener('input', updatePreview); el.addEventListener('change', updatePreview); }
+    });
+    updatePreview();
+  }
+
+  /* =====================================================================
+     DEMO SYNTH KIT + FILE / WAV / ZIP EXPORT
+  ===================================================================== */
+  function forgeDemoDrumKit(targetParentId) {
+    var sr = audioCtx.sampleRate;
+    var kitDir = createFolder(makeUniqueName('BOOMBAP_SYNTH_KIT', targetParentId), targetParentId);
+    function synth(lenSec, fn) {
+      var frames = Math.floor(sr * lenSec), buf = audioCtx.createBuffer(2, frames, sr);
+      var l = buf.getChannelData(0), r = buf.getChannelData(1);
+      for (var i = 0; i < frames; i++) { var o = fn(i / sr); l[i] = Math.max(-1, Math.min(1, o[0])); r[i] = Math.max(-1, Math.min(1, o[1])); }
+      return buf;
+    }
+    createSampleNode('01_KICK_SUB808.wav', kitDir.id, synth(0.52, function(t) {
+      var s = Math.tanh((Math.sin(2 * Math.PI * (46 + 135 * Math.exp(-t * 34)) * t) * 1.4 + (Math.random() * 2 - 1) * Math.exp(-t * 280) * 0.25) * Math.exp(-t * 6.5)) * 0.9;
+      return [s, s];
+    }));
+    createSampleNode('02_SNARE_CRACK.wav', kitDir.id, synth(0.30, function(t) {
+      var s = Math.tanh((Math.sin(2 * Math.PI * (185 + 90 * Math.exp(-t * 50)) * t) * Math.exp(-t * 22) * 0.85 + (Math.random() * 2 - 1) * Math.exp(-t * 14) * 0.78) * 1.3) * 0.86;
+      return [s, s];
+    }));
+    createSampleNode('03_HAT_CLOSED.wav', kitDir.id, synth(0.11, function(t) {
+      var s = ((Math.random() * 2 - 1) * 0.72 + Math.sin(2 * Math.PI * 3420 * t) * 0.28) * Math.exp(-t * 52) * 0.7;
+      return [s, s * 0.95];
+    }));
+    var barSec = (60 / 90) * 4;
+    var hits = [{ t: 0, ty: 'k' }, { t: 0.333, ty: 'h' }, { t: 0.666, ty: 's' }, { t: 1.0, ty: 'h' }, { t: 1.166, ty: 'k' }, { t: 1.333, ty: 'h' }, { t: 1.666, ty: 'k' }, { t: 2.0, ty: 's' }, { t: 2.333, ty: 'h' }];
+    var breakNode = createSampleNode('04_BREAK_90BPM_CHOPME.wav', kitDir.id, synth(barSec, function(t) {
+      var v = 0;
+      for (var h = 0; h < hits.length; h++) {
+        var dt = t - hits[h].t; if (dt < 0 || dt > 0.32) continue;
+        if (hits[h].ty === 'k') v += Math.sin(2 * Math.PI * (52 + 120 * Math.exp(-dt * 38)) * dt) * Math.exp(-dt * 11) * 0.9;
+        else if (hits[h].ty === 's') v += Math.sin(2 * Math.PI * 195 * dt) * Math.exp(-dt * 24) * 0.6 + (Math.random() * 2 - 1) * Math.exp(-dt * 18) * 0.7;
+        else v += (Math.random() * 2 - 1) * Math.exp(-dt * 60) * 0.35;
+      }
+      var s = Math.tanh(v * 1.15) * 0.85; return [s, s];
+    }), [0.25, 0.5, 0.75]);
+
+    tiles[activeTileId].cwd = kitDir.id; inspectNode(breakNode.id); renderAll();
+    showToast('FORGED SYNTH DRUM KIT (PRE-CHOPPED BREAK LOADED)');
+  }
+
+  function encodeWAVBytes(audioBuffer) {
+    var numCh = audioBuffer.numberOfChannels, sr = audioBuffer.sampleRate, frames = audioBuffer.length;
+    var dataSize = frames * numCh * 2, buf = new ArrayBuffer(44 + dataSize), view = new DataView(buf);
+    function wStr(o, s) { for (var i = 0; i < s.length; i++) view.setUint8(o + i, s.charCodeAt(i)); }
+    wStr(0, 'RIFF'); view.setUint32(4, 36 + dataSize, true); wStr(8, 'WAVE'); wStr(12, 'fmt ');
+    view.setUint32(16, 16, true); view.setUint16(20, 1, true); view.setUint16(22, numCh, true);
+    view.setUint32(24, sr, true); view.setUint32(28, sr * numCh * 2, true);
+    view.setUint16(32, numCh * 2, true); view.setUint16(34, 16, true); wStr(36, 'data'); view.setUint32(40, dataSize, true);
+    var chs = []; for (var c = 0; c < numCh; c++) chs.push(audioBuffer.getChannelData(c));
+    var off = 44;
+    for (var f = 0; f < frames; f++) {
+      for (var ci = 0; ci < numCh; ci++) {
+        var s = Math.max(-1, Math.min(1, chs[ci][f]));
+        view.setInt16(off, s < 0 ? s * 0x8000 : s * 0x7FFF, true); off += 2;
+      }
+    }
+    return new Uint8Array(buf);
+  }
+
+  function exportSingleNodeFile(nodeId) {
+    var n = vfs.get(nodeId); if (!n || isContainer(n)) return;
+    if (n.type === 'sample') {
+      var url = URL.createObjectURL(new Blob([encodeWAVBytes(n.buffer)], { type: 'audio/wav' }));
+      var a = document.createElement('a'); a.href = url; a.download = n.name.toLowerCase().endsWith('.wav') ? n.name : (n.name + '.wav');
+      a.click(); setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
+      showToast('SAVED ' + a.download);
+    } else if (n.blob) {
+      var a2 = document.createElement('a'); a2.href = n.url; a2.download = n.name; a2.click();
+      showToast('SAVED ' + n.name);
+    }
+  }
+
+  async function collectZipEntriesAsync(node, prefix, entries) {
+    if (node.type === 'sample') {
+      var fn = node.name.toLowerCase().endsWith('.wav') ? node.name : (node.name + '.wav');
+      entries.push({ path: prefix + fn, data: encodeWAVBytes(node.buffer) });
+    } else if ((node.type === 'image' || node.type === 'video') && node.blob) {
+      entries.push({ path: prefix + node.name, data: new Uint8Array(await node.blob.arrayBuffer()) });
+    } else if (isContainer(node)) {
+      var kids = getChildren(node.id);
+      for (var i = 0; i < kids.length; i++) await collectZipEntriesAsync(kids[i], prefix + node.name.replace(/\.zip$/i, '') + '/', entries);
+    }
+  }
+
+  async function downloadZipArchive(zipNodeId, customName) {
+    var zNode = vfs.get(zipNodeId); if (!zNode || !isContainer(zNode)) return;
+    var entries = [], kids = getChildren(zNode.id);
+    for (var i = 0; i < kids.length; i++) await collectZipEntriesAsync(kids[i], '', entries);
+    if (!entries.length) { showToast('ARCHIVE IS EMPTY', true); return; }
+    var url = URL.createObjectURL(buildZipBlob(entries)), a = document.createElement('a');
+    a.href = url; a.download = customName || (zNode.name.toLowerCase().endsWith('.zip') ? zNode.name : (zNode.name + '.zip'));
+    a.click(); setTimeout(function() { URL.revokeObjectURL(url); }, 1200);
+    showToast('EXPORTED ' + a.download + ' (' + entries.length + ' FILES)');
+  }
+
+  /* =====================================================================
+     AUDIO PLAYBACK & CLEAN DSP (NO PITCH, NO FILTER, NO 12-BIT)
+  ===================================================================== */
+  function updatePanicUI() {
+    var vidEl = document.getElementById('deckVideoEl');
+    var armed = activeVoices.size > 0 || (vidEl && !vidEl.paused);
+    document.getElementById('panicBtn').classList.toggle('glow-red', armed);
+    document.getElementById('ledPanic').className = armed ? 'led-slit crimson' : 'led-slit';
+  }
+
+  function stopVideoDeck() {
+    var v = document.getElementById('deckVideoEl');
+    if (v) { v.pause(); v.removeAttribute('src'); v.load(); }
+  }
+
+  async function playSampleRegion(sampleId, normStart, normEnd, forceNoLoop) {
+    var node = vfs.get(sampleId); if (!node || node.type !== 'sample') return;
+    if (audioCtx.state === 'suspended') await audioCtx.resume();
+    if (audioState.monoMode) stopAllVoices(false);
+
+    var buf = node.buffer;
+    var sNorm = (normStart !== undefined) ? normStart : node.trimStart;
+    var eNorm = (normEnd !== undefined) ? normEnd : node.trimEnd;
+    if (sNorm >= 0.996) sNorm = 0;
+    if (eNorm <= sNorm + 0.002) eNorm = 1.0;
+
+    var startSec = sNorm * buf.duration, endSec = eNorm * buf.duration, durSec = Math.max(0.005, endSec - startSec);
+    var lStart = node.trimStart * buf.duration, lEnd = Math.max(lStart + 0.01, node.trimEnd * buf.duration);
+    var doLoop = !forceNoLoop && audioState.loopMode && (startSec >= lStart - 0.005 && startSec < lEnd - 0.005);
+
+    var src = audioCtx.createBufferSource();
+    src.buffer = buf; src.loop = doLoop;
+    if (doLoop) { src.loopStart = lStart; src.loopEnd = lEnd; }
+
+    var vGain = audioCtx.createGain(), now = audioCtx.currentTime;
+    vGain.gain.setValueAtTime(0.0001, now);
+    vGain.gain.linearRampToValueAtTime(1.0, now + 0.002);
+    src.connect(vGain); vGain.connect(masterGain);
+
+    var vid = voiceSeq++;
+    activeVoices.set(vid, {
+      id: vid, sampleId: sampleId, src: src, gain: vGain, startTime: now,
+      startSec: startSec, loopStartSec: lStart, loopEndSec: lEnd,
+      regionDur: durSec, totalDur: buf.duration, loop: doLoop
+    });
+
+    src.onended = function() {
+      if (activeVoices.has(vid)) {
+        activeVoices.delete(vid); syncPlayingClasses(); redrawSampleWaveforms(sampleId);
+        if (inspectedNodeId === sampleId) drawInspectorWaveform();
+        updatePanicUI();
+      }
+    };
+
+    if (doLoop) src.start(0, startSec); else src.start(0, startSec, durSec);
+    syncPlayingClasses(); updatePanicUI(); ensureAnimLoop();
+  }
+
+  function triggerSliceByIndex(idx) {
+    var node = inspectedNodeId ? vfs.get(inspectedNodeId) : null;
+    if (!node || node.type !== 'sample') return;
+    var regions = getSliceRegions(node);
+    if (idx < 0 || idx >= regions.length) return;
+    inspState.activeSliceIdx = idx;
+    playSampleRegion(node.id, regions[idx].start, regions[idx].end, true);
+    drawInspectorWaveform();
+  }
+
+  function stopSampleVoices(sampleId) {
+    activeVoices.forEach(function(v, vid) {
+      if (v.sampleId === sampleId) {
+        try { v.src.onended = null; v.src.stop(); v.src.disconnect(); v.gain.disconnect(); } catch (err) {}
+        activeVoices.delete(vid);
+      }
+    });
+    syncPlayingClasses(); redrawSampleWaveforms(sampleId);
+    if (inspectedNodeId === sampleId) drawInspectorWaveform();
+    updatePanicUI();
+  }
+
+  function stopAllVoices(isPanic) {
+    var affected = new Set();
+    activeVoices.forEach(function(v) {
+      affected.add(v.sampleId);
+      try { v.src.onended = null; v.gain.gain.setValueAtTime(0, audioCtx.currentTime); v.src.stop(); v.src.disconnect(); v.gain.disconnect(); } catch (err) {}
+    });
+    activeVoices.clear(); inspState.activeSliceIdx = -1;
+    var vidEl = document.getElementById('deckVideoEl');
+    if (isPanic && vidEl && !vidEl.paused) vidEl.pause();
+    syncPlayingClasses(); affected.forEach(redrawSampleWaveforms);
+    drawInspectorWaveform(); updatePanicUI();
+    if (isPanic) {
+      var p = document.getElementById('panicBtn');
+      p.classList.add('panic-flash'); setTimeout(function() { p.classList.remove('panic-flash'); }, 160);
+    }
+  }
+
+  function getSamplePlayheadNorm(sampleId) {
+    var latest = null; activeVoices.forEach(function(v) { if (v.sampleId === sampleId) latest = v; });
+    if (!latest) return null;
+    var elapsed = Math.max(0, audioCtx.currentTime - latest.startTime);
+    var absSec = latest.loop
+      ? (latest.startSec + elapsed >= latest.loopEndSec
+          ? latest.loopStartSec + ((latest.startSec + elapsed - latest.loopStartSec) % Math.max(0.01, latest.loopEndSec - latest.loopStartSec))
+          : latest.startSec + elapsed)
+      : Math.min(latest.totalDur, latest.startSec + elapsed);
+    return Math.max(0, Math.min(1, absSec / latest.totalDur));
+  }
+
+  function syncPlayingClasses() {
+    var ids = new Set(); activeVoices.forEach(function(v) { ids.add(v.sampleId); });
+    document.querySelectorAll('.node-card[data-id]').forEach(function(el) { el.classList.toggle('playing', ids.has(el.dataset.id)); });
+  }
+
+  function processBufferOp(src, op, trimStart, trimEnd) {
+    var nCh = src.numberOfChannels, sr = src.sampleRate, len = src.length, out = null;
+    if (op === 'crop') {
+      var sIdx = Math.max(0, Math.floor((trimStart || 0) * len)), eIdx = Math.min(len, Math.ceil((trimEnd || 1) * len));
+      var nLen = Math.max(16, eIdx - sIdx); out = audioCtx.createBuffer(nCh, nLen, sr);
+      for (var c = 0; c < nCh; c++) out.copyToChannel(src.getChannelData(c).subarray(sIdx, sIdx + nLen), c);
+    } else if (op === 'autotrim') {
+      var th = 0.008, first = 0, last = len - 1;
+      for (var i = 0; i < len; i++) {
+        var hitS = false; for (var c1 = 0; c1 < nCh; c1++) if (Math.abs(src.getChannelData(c1)[i]) > th) { hitS = true; break; }
+        if (hitS) { first = Math.max(0, i - 32); break; }
+      }
+      for (var j = len - 1; j >= first; j--) {
+        var hitE = false; for (var c2 = 0; c2 < nCh; c2++) if (Math.abs(src.getChannelData(c2)[j]) > th) { hitE = true; break; }
+        if (hitE) { last = Math.min(len - 1, j + 128); break; }
+      }
+      var tLen = Math.max(32, last - first + 1); out = audioCtx.createBuffer(nCh, tLen, sr);
+      for (var c3 = 0; c3 < nCh; c3++) out.copyToChannel(src.getChannelData(c3).subarray(first, first + tLen), c3);
+    } else if (op === 'reverse') {
+      out = audioCtx.createBuffer(nCh, len, sr);
+      for (var cR = 0; cR < nCh; cR++) { var dR = new Float32Array(src.getChannelData(cR)); dR.reverse(); out.copyToChannel(dR, cR); }
+    } else if (op === 'normalize') {
+      var maxP = 0;
+      for (var cN = 0; cN < nCh; cN++) { var dN = src.getChannelData(cN); for (var iN = 0; iN < dN.length; iN++) { var a = Math.abs(dN[iN]); if (a > maxP) maxP = a; } }
+      var g = maxP > 1e-4 ? (0.944 / maxP) : 1; out = audioCtx.createBuffer(nCh, len, sr);
+      for (var cN2 = 0; cN2 < nCh; cN2++) {
+        var sN = src.getChannelData(cN2), oN = new Float32Array(len);
+        for (var iN2 = 0; iN2 < len; iN2++) oN[iN2] = Math.max(-1, Math.min(1, sN[iN2] * g));
+        out.copyToChannel(oN, cN2);
+      }
+    } else if (op === 'fadein' || op === 'fadeout') {
+      out = cloneAudioBuffer(src);
+      var fS = Math.min(Math.floor(len * 0.45), Math.floor(sr * (op === 'fadein' ? 0.025 : 0.065)));
+      for (var cF = 0; cF < nCh; cF++) {
+        var dF = out.getChannelData(cF);
+        if (op === 'fadein') for (var fi = 0; fi < fS; fi++) dF[fi] *= (fi / fS);
+        else for (var fo = 0; fo < fS; fo++) dF[len - 1 - fo] *= (fo / fS);
+      }
+    } else if (op === 'mono') {
+      out = audioCtx.createBuffer(1, len, sr);
+      var oM = out.getChannelData(0), inv = 1 / nCh;
+      for (var iM = 0; iM < len; iM++) { var sm = 0; for (var cM = 0; cM < nCh; cM++) sm += src.getChannelData(cM)[iM]; oM[iM] = sm * inv; }
+    } else if (op === 'dc') {
+      out = audioCtx.createBuffer(nCh, len, sr);
+      for (var cD = 0; cD < nCh; cD++) {
+        var sD = src.getChannelData(cD), oD = new Float32Array(len), mean = 0;
+        for (var iD = 0; iD < len; iD++) mean += sD[iD]; mean /= Math.max(1, len);
+        for (var iD2 = 0; iD2 < len; iD2++) oD[iD2] = Math.max(-1, Math.min(1, sD[iD2] - mean));
+        out.copyToChannel(oD, cD);
+      }
+    }
+    return out;
+  }
+
+  function applyDspToNodes(targetNodes, op) {
+    var samples = targetNodes.filter(function(n) { return n && n.type === 'sample'; });
+    if (!samples.length) return;
+    var recs = [];
+    samples.forEach(function(smp) {
+      stopSampleVoices(smp.id);
+      var nextBuf = processBufferOp(smp.buffer, op, smp.trimStart, smp.trimEnd); if (!nextBuf) return;
+      var nextSlices = (smp.slices || []).slice();
+      if (op === 'crop') {
+        var span = Math.max(0.001, smp.trimEnd - smp.trimStart);
+        nextSlices = nextSlices.filter(function(c) { return c > smp.trimStart + 0.004 && c < smp.trimEnd - 0.004; }).map(function(c) { return (c - smp.trimStart) / span; });
+      } else if (op === 'autotrim') nextSlices = [];
+      else if (op === 'reverse') nextSlices = nextSlices.map(function(c) { return 1 - c; }).sort(function(a, b) { return a - b; });
+      recs.push({
+        node: smp, prevBuf: smp.buffer, prevS: smp.trimStart, prevE: smp.trimEnd, prevSl: (smp.slices || []).slice(),
+        nextBuf: nextBuf, nextS: (op === 'crop' || op === 'autotrim') ? 0 : smp.trimStart,
+        nextE: (op === 'crop' || op === 'autotrim') ? 1 : smp.trimEnd, nextSl: nextSlices
+      });
+    });
+    if (!recs.length) return;
+    function applyD() { recs.forEach(function(r) { r.node.buffer = r.nextBuf; r.node.trimStart = r.nextS; r.node.trimEnd = r.nextE; r.node.slices = r.nextSl.slice(); refreshSampleMeta(r.node); }); }
+    function revertD() { recs.forEach(function(r) { r.node.buffer = r.prevBuf; r.node.trimStart = r.prevS; r.node.trimEnd = r.prevE; r.node.slices = r.prevSl.slice(); refreshSampleMeta(r.node); }); }
+    applyD(); pushUndo({ label: 'DSP ' + op.toUpperCase(), undo: revertD, redo: applyD });
+    renderAll(); showToast('APPLIED ' + op.toUpperCase() + ' (' + recs.length + ')');
+  }
+
+  function explodeInspectedSlices() {
+    var node = inspectedNodeId ? vfs.get(inspectedNodeId) : null;
+    if (!node || node.type !== 'sample') return;
+    var regions = getSliceRegions(node);
+    if (regions.length < 2) { showToast('ADD CHOPS FIRST (AUTO, /4 /8 /16, OR DBL-CLICK WAVE)', true); return; }
+    var stem = node.name.replace(/\.[^.]+$/, '');
+    var outDir = createFolder(makeUniqueName(stem + '_CHOPS', tiles[activeTileId].cwd), tiles[activeTileId].cwd);
+    var created = [outDir], buf = node.buffer;
+    regions.forEach(function(reg, i) {
+      var sIdx = Math.floor(reg.start * buf.length), eIdx = Math.floor(reg.end * buf.length), len = Math.max(64, eIdx - sIdx);
+      var cBuf = audioCtx.createBuffer(buf.numberOfChannels, len, buf.sampleRate), fade = Math.min(48, Math.floor(len * 0.1));
+      for (var ch = 0; ch < buf.numberOfChannels; ch++) {
+        var seg = new Float32Array(buf.getChannelData(ch).subarray(sIdx, Math.min(buf.length, sIdx + len)));
+        for (var f = 0; f < fade; f++) { seg[f] *= (f / fade); seg[seg.length - 1 - f] *= (f / fade); }
+        cBuf.copyToChannel(seg, ch);
+      }
+      created.push(createSampleNode(stem + '_CHOP_' + String(i + 1).padStart(2, '0') + '.wav', outDir.id, cBuf));
+    });
+    pushUndo({ label: 'EXPLODE ' + regions.length, undo: function() { created.forEach(function(n) { vfs.delete(n.id); }); }, redo: function() { created.forEach(function(n) { vfs.set(n.id, n); }); } });
+    tiles[activeTileId].cwd = outDir.id; renderAll();
+    showToast('EXPLODED ' + regions.length + ' CHOPS INTO ' + outDir.name);
+  }
+
+  /* =====================================================================
+     VIDEO & IMAGE FOUNDRY OPERATIONS (EXTRACT AUDIO, GRAB FRAME, ROTATE, LIGHTBOX)
+  ===================================================================== */
+  async function extractAudioFromVideo(videoNode) {
+    if (!videoNode || videoNode.type !== 'video') return;
+    showToast('EXTRACTING AUDIO FROM ' + videoNode.name + '...');
+    try {
+      var arr = await videoNode.blob.arrayBuffer();
+      var decoded = await audioCtx.decodeAudioData(arr);
+      var wavName = makeUniqueName(videoNode.name.replace(/\.[^.]+$/, '_AUDIO.wav'), tiles[activeTileId].cwd);
+      var smp = createSampleNode(wavName, tiles[activeTileId].cwd, decoded);
+      pushUndo({ label: 'EXTRACT AUDIO', undo: function() { vfs.delete(smp.id); }, redo: function() { vfs.set(smp.id, smp); } });
+      inspectNode(smp.id); renderAll();
+      showToast('EXTRACTED ' + smp.name + ' — READY TO CHOP');
+    } catch (err) {
+      showToast('NO DECODABLE AUDIO TRACK FOUND IN VIDEO', true);
+    }
+  }
+
+  function grabFrameFromVideo(videoNode) {
+    var v = document.getElementById('deckVideoEl');
+    if (!videoNode || !v || !v.videoWidth) { showToast('VIDEO FRAME NOT READY', true); return; }
+    var c = document.createElement('canvas'); c.width = v.videoWidth; c.height = v.videoHeight;
+    c.getContext('2d').drawImage(v, 0, 0, c.width, c.height);
+    c.toBlob(async function(blob) {
+      if (!blob) return;
+      var url = URL.createObjectURL(blob);
+      var meta = await generateImageThumb(blob, url);
+      var fname = makeUniqueName(videoNode.name.replace(/\.[^.]+$/, '_FRAME.png'), tiles[activeTileId].cwd);
+      var imgNode = createImageNode(fname, tiles[activeTileId].cwd, blob, meta, url);
+      pushUndo({ label: 'GRAB FRAME', undo: function() { vfs.delete(imgNode.id); }, redo: function() { vfs.set(imgNode.id, imgNode); } });
+      renderAll(); showToast('CAPTURED STILL: ' + fname);
+    }, 'image/png');
+  }
+
+  function rotateImageNode90(imgNode) {
+    if (!imgNode || imgNode.type !== 'image') return;
+    var im = new Image();
+    im.onload = function() {
+      var c = document.createElement('canvas'); c.width = im.naturalHeight; c.height = im.naturalWidth;
+      var ctx = c.getContext('2d');
+      ctx.translate(c.width / 2, c.height / 2); ctx.rotate(Math.PI / 2);
+      ctx.drawImage(im, -im.naturalWidth / 2, -im.naturalHeight / 2);
+      c.toBlob(async function(blob) {
+        if (!blob) return;
+        var nextUrl = URL.createObjectURL(blob), meta = await generateImageThumb(blob, nextUrl);
+        var prev = { blob: imgNode.blob, url: imgNode.url, thumbUrl: imgNode.thumbUrl, width: imgNode.width, height: imgNode.height, sizeBytes: imgNode.sizeBytes };
+        var next = { blob: blob, url: nextUrl, thumbUrl: meta.thumbUrl, width: meta.width, height: meta.height, sizeBytes: blob.size };
+        function applyR() { Object.assign(imgNode, next); }
+        function revertR() { Object.assign(imgNode, prev); }
+        applyR(); pushUndo({ label: 'ROTATE IMAGE', undo: revertR, redo: applyR });
+        inspectNode(imgNode.id); renderAll(); showToast('ROTATED 90°');
+      }, imgNode.mime === 'image/jpeg' ? 'image/jpeg' : 'image/png', 0.92);
+    };
+    im.src = imgNode.url;
+  }
+
+  function openLightbox(node) {
+    if (!node || (node.type !== 'image' && node.type !== 'video')) return;
+    var lb = document.getElementById('lightboxBackdrop'), content = document.getElementById('lightboxContent');
+    if (node.type === 'image') {
+      content.innerHTML = '<img src="' + node.url + '" alt=""><div class="lightbox-caption">' + escapeHtml(node.name) + ' [' + node.width + 'x' + node.height + ' | ' + formatBytes(node.sizeBytes) + '] — CLICK OUTSIDE OR ESC TO CLOSE</div>';
+    } else {
+      stopVideoDeck();
+      content.innerHTML = '<video src="' + node.url + '" controls autoplay playsinline></video><div class="lightbox-caption">' + escapeHtml(node.name) + ' [' + node.width + 'x' + node.height + ' | ' + formatDuration(node.duration) + ']</div>';
+    }
+    lb.classList.add('open');
+  }
+  function closeLightbox() {
+    var lb = document.getElementById('lightboxBackdrop');
+    if (!lb.classList.contains('open')) return;
+    lb.classList.remove('open');
+    document.getElementById('lightboxContent').innerHTML = '';
+  }
+  document.getElementById('lightboxBackdrop').addEventListener('click', function(e) { if (e.target === this) closeLightbox(); });
+
+  /* =====================================================================
+     ADAPTIVE INSPECTOR & WAVEFORM RENDERING
+  ===================================================================== */
+  function setActiveDeckPanel(mode) {
+    document.getElementById('deckAudioPanel').classList.toggle('active', mode === 'audio');
+    document.getElementById('deckVideoPanel').classList.toggle('active', mode === 'video');
+    document.getElementById('deckImagePanel').classList.toggle('active', mode === 'image');
+    if (mode !== 'video') stopVideoDeck();
+  }
+
+  function inspectNode(nodeId) {
+    var node = nodeId ? vfs.get(nodeId) : null;
+    if (!node || isContainer(node)) { setActiveDeckPanel('audio'); drawInspectorWaveform(); return; }
+    if (inspectedNodeId !== nodeId) { inspState.zoom = 1.0; inspState.scrollNorm = 0.0; inspState.activeSliceIdx = -1; }
+    inspectedNodeId = nodeId;
+
+    if (node.type === 'sample') {
+      setActiveDeckPanel('audio');
+      drawInspectorWaveform();
+    } else if (node.type === 'video') {
+      setActiveDeckPanel('video');
+      var v = document.getElementById('deckVideoEl');
+      if (v.src !== node.url) v.src = node.url;
+      v.loop = audioState.loopMode;
+      v.volume = audioState.volume;
+      document.getElementById('vidMetaStats').innerHTML =
+        escapeHtml(node.name) + ' | <span>' + (node.width ? (node.width + 'x' + node.height) : 'VID') + '</span> | <span>' + formatDuration(node.duration) + '</span> | ' + formatBytes(node.sizeBytes);
+    } else if (node.type === 'image') {
+      setActiveDeckPanel('image');
+      document.getElementById('deckImgEl').src = node.url;
+      document.getElementById('imgMetaStats').innerHTML =
+        escapeHtml(node.name) + ' | <span>' + (node.width ? (node.width + 'x' + node.height) : 'IMG') + '</span> | ' + formatBytes(node.sizeBytes);
+    }
+  }
+
+  function drawThumbWave(canvas, sampleNode, themeKey, playheadNorm) {
+    var w = canvas.width, h = canvas.height, ctx = canvas.getContext('2d');
+    var theme = THEME_COLORS[themeKey] || THEME_COLORS.cyan;
+    ctx.clearRect(0, 0, w, h);
+    ctx.strokeStyle = 'rgba(72,90,115,0.3)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(0, h * 0.5); ctx.lineTo(w, h * 0.5); ctx.stroke();
+    if (!sampleNode || !sampleNode.peaks) return;
+
+    if (sampleNode.trimStart > 0.005) { ctx.fillStyle = 'rgba(0,0,0,0.58)'; ctx.fillRect(0, 0, sampleNode.trimStart * w, h); }
+    if (sampleNode.trimEnd < 0.995) { ctx.fillStyle = 'rgba(0,0,0,0.58)'; ctx.fillRect(sampleNode.trimEnd * w, 0, (1 - sampleNode.trimEnd) * w, h); }
+
+    var peaks = sampleNode.peaks, buckets = peaks.length / 2, barW = w / buckets, mid = h * 0.5;
+    ctx.fillStyle = theme.fill;
+    for (var b = 0; b < buckets; b++) {
+      var yT = mid - peaks[b * 2 + 1] * (mid - 4), yB = mid - peaks[b * 2] * (mid - 4);
+      ctx.fillRect(b * barW, yT, Math.max(1, barW - 0.2), Math.max(1.6, yB - yT));
+    }
+    if (sampleNode.slices && sampleNode.slices.length) {
+      ctx.strokeStyle = 'rgba(255,193,59,0.6)'; ctx.lineWidth = 1;
+      for (var s = 0; s < sampleNode.slices.length; s++) { var sx = sampleNode.slices[s] * w; ctx.beginPath(); ctx.moveTo(sx, 0); ctx.lineTo(sx, h); ctx.stroke(); }
+    }
+    if (playheadNorm !== null && playheadNorm !== undefined) {
+      var px = playheadNorm * w; ctx.strokeStyle = theme.head; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(px, 0); ctx.lineTo(px, h); ctx.stroke();
+    }
+  }
+
+  function redrawSampleWaveforms(sampleId) {
+    var node = vfs.get(sampleId), entries = sampleCanvases.get(sampleId);
+    if (!node || !entries) return;
+    var ph = getSamplePlayheadNorm(sampleId);
+    entries.forEach(function(e) { drawThumbWave(e.canvas, node, e.theme, ph); });
+  }
+
+  var inspBox = document.getElementById('inspectorWaveBox');
+  var inspCanvas = document.getElementById('inspectorCanvas');
+  var meterCanvas = document.getElementById('masterMeterCanvas');
+
+  function syncInspectorSize() {
+    var w = Math.max(280, inspBox.clientWidth), h = Math.max(70, inspBox.clientHeight);
+    if (inspCanvas.width !== w || inspCanvas.height !== h) { inspCanvas.width = w; inspCanvas.height = h; }
+  }
+  function getViewWindow() { var sp = 1 / inspState.zoom; return { start: Math.max(0, Math.min(1 - sp, inspState.scrollNorm)), span: sp }; }
+  function normToScreenX(norm, w) { var win = getViewWindow(); return ((norm - win.start) / win.span) * w; }
+  function screenXToNorm(x, w) { var win = getViewWindow(); return Math.max(0, Math.min(1, win.start + (x / w) * win.span)); }
+
+  function drawInspectorWaveform() {
+    if (!document.getElementById('deckAudioPanel').classList.contains('active')) return;
+    syncInspectorSize();
+    var w = inspCanvas.width, h = inspCanvas.height, ctx = inspCanvas.getContext('2d');
+    var node = inspectedNodeId ? vfs.get(inspectedNodeId) : null;
+    document.getElementById('inspZoomTag').textContent = inspState.zoom.toFixed(1) + 'x';
+    ctx.clearRect(0, 0, w, h);
+
+    ctx.strokeStyle = 'rgba(65,84,110,0.24)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(0, h * 0.5); ctx.lineTo(w, h * 0.5);
+    for (var g = 1; g < 8; g++) { ctx.moveTo((w * g) / 8, 0); ctx.lineTo((w * g) / 8, h); }
+    ctx.stroke();
+
+    if (!node || node.type !== 'sample') {
+      document.getElementById('inspTitle').textContent = 'NO AUDIO SELECTED — DROP MP4 / IMAGES / AUDIO / ZIP OR CLICK [DEMO]';
+      document.getElementById('deckStats').innerHTML = 'PEAK: <span>--</span> | CHOPS: <span>0</span>';
+      return;
+    }
+
+    var regions = getSliceRegions(node), regionDur = (node.trimEnd - node.trimStart) * node.duration;
+    document.getElementById('inspTitle').textContent = node.name + '  [' + formatDuration(regionDur) + ' / ' + formatDuration(node.duration) + ' | ' + (node.sampleRate / 1000).toFixed(1) + 'kHz/' + node.channels + 'ch]';
+    document.getElementById('deckStats').innerHTML = 'PEAK: <span>' + node.peakDb + '</span> | CHOPS: <span>' + (node.slices.length ? regions.length : 0) + '</span>';
+
+    var theme = THEME_COLORS[tiles[activeTileId].waveTheme] || THEME_COLORS.cyan, win = getViewWindow();
+
+    if (node.slices.length > 0) {
+      regions.forEach(function(reg, idx) {
+        var rx0 = Math.max(0, normToScreenX(reg.start, w)), rx1 = Math.min(w, normToScreenX(reg.end, w));
+        if (rx1 <= rx0) return;
+        if (idx === inspState.activeSliceIdx) { ctx.fillStyle = 'rgba(255,193,59,0.15)'; ctx.fillRect(rx0, 0, rx1 - rx0, h); }
+        else if (idx % 2 === 1) { ctx.fillStyle = 'rgba(255,255,255,0.025)'; ctx.fillRect(rx0, 0, rx1 - rx0, h); }
+        if (rx1 - rx0 >= 16) {
+          ctx.fillStyle = idx === inspState.activeSliceIdx ? '#ffc13b' : 'rgba(255,193,59,0.24)';
+          ctx.fillRect(rx0 + 2, h - 15, 18, 13);
+          ctx.fillStyle = idx === inspState.activeSliceIdx ? '#080b10' : '#ffc13b';
+          ctx.font = 'bold 9px ui-monospace, monospace'; ctx.textAlign = 'center';
+          ctx.fillText(String(idx + 1).padStart(2, '0'), rx0 + 11, h - 5);
+        }
+      });
+    }
+
+    var buf = node.buffer, ch0 = buf.getChannelData(0), ch1 = buf.numberOfChannels > 1 ? buf.getChannelData(1) : ch0;
+    var sStart = Math.floor(win.start * ch0.length), sEnd = Math.ceil((win.start + win.span) * ch0.length);
+    var vis = Math.max(1, sEnd - sStart), mid = h * 0.5, sampsPerCol = vis / w;
+    ctx.fillStyle = theme.fill;
+    for (var x = 0; x < w; x++) {
+      var s0 = sStart + Math.floor(x * sampsPerCol), s1 = Math.min(ch0.length, Math.max(s0 + 1, sStart + Math.floor((x + 1) * sampsPerCol)));
+      var stride = Math.max(1, Math.floor((s1 - s0) / 36)), min = 1, max = -1;
+      for (var k = s0; k < s1; k += stride) { var v = (ch0[k] + ch1[k]) * 0.5; if (v < min) min = v; if (v > max) max = v; }
+      if (min > max) { min = 0; max = 0; }
+      ctx.fillRect(x, mid - max * (mid - 14), 1, Math.max(1.5, (max - min) * (mid - 14)));
+    }
+
+    var sx = normToScreenX(node.trimStart, w), ex = normToScreenX(node.trimEnd, w);
+    ctx.fillStyle = 'rgba(2,4,7,0.68)';
+    if (sx > 0) ctx.fillRect(0, 0, Math.min(w, sx), h);
+    if (ex < w) ctx.fillRect(Math.max(0, ex), 0, w - Math.max(0, ex), h);
+
+    for (var sl = 0; sl < node.slices.length; sl++) {
+      var slx = normToScreenX(node.slices[sl], w);
+      if (slx < -10 || slx > w + 10) continue;
+      var hot = (sl === inspState.hoverSliceIdx || (inspState.draggingType === 'slice' && sl === inspState.draggingSliceIdx));
+      ctx.strokeStyle = hot ? '#ffffff' : '#ffc13b'; ctx.lineWidth = hot ? 2.2 : 1.4;
+      ctx.setLineDash(hot ? [] : [4, 3]);
+      ctx.beginPath(); ctx.moveTo(slx, 0); ctx.lineTo(slx, h); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = hot ? '#ffffff' : '#ffc13b';
+      ctx.beginPath(); ctx.moveTo(slx, 2); ctx.lineTo(slx + 6, 8); ctx.lineTo(slx, 14); ctx.lineTo(slx - 6, 8); ctx.closePath(); ctx.fill();
+    }
+
+    function drawMarker(mx, lbl, col) {
+      if (mx < -12 || mx > w + 12) return;
+      ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(mx, 0); ctx.lineTo(mx, h); ctx.stroke();
+      ctx.fillStyle = col; ctx.fillRect(mx - 8, 0, 16, 14);
+      ctx.fillStyle = '#05070a'; ctx.font = 'bold 9px ui-monospace, monospace'; ctx.textAlign = 'center'; ctx.fillText(lbl, mx, 10);
+    }
+    drawMarker(sx, 'S', '#35ff9b'); drawMarker(ex, 'E', '#ff3355');
+
+    var ph = getSamplePlayheadNorm(node.id);
+    if (ph !== null) {
+      var px = normToScreenX(ph, w);
+      if (px >= -2 && px <= w + 2) {
+        var tw = Math.min(32, px), grad = ctx.createLinearGradient(px - tw, 0, px, 0);
+        grad.addColorStop(0, 'rgba(0,0,0,0)'); grad.addColorStop(1, theme.trail);
+        ctx.fillStyle = grad; ctx.fillRect(px - tw, 0, tw, h);
+        ctx.strokeStyle = theme.head; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(px, 0); ctx.lineTo(px, h); ctx.stroke();
+      }
+    }
+  }
+
+  function drawMeter() {
+    analyserL.getFloatTimeDomainData(meterBufL); analyserR.getFloatTimeDomainData(meterBufR);
+    var pL = 0, pR = 0;
+    for (var i = 0; i < meterBufL.length; i++) { var aL = Math.abs(meterBufL[i]), aR = Math.abs(meterBufR[i]); if (aL > pL) pL = aL; if (aR > pR) pR = aR; }
+    if (pL > 0.99 || pR > 0.99) document.getElementById('clipLed').classList.add('clipped');
+    peakHoldL = Math.max(pL, peakHoldL * 0.94); peakHoldR = Math.max(pR, peakHoldR * 0.94);
+
+    var ctx = meterCanvas.getContext('2d'), w = meterCanvas.width, h = meterCanvas.height;
+    ctx.fillStyle = '#05070a'; ctx.fillRect(0, 0, w, h);
+    var segs = 16, sw = (w - 4) / segs;
+    function bar(y, pk, hld) {
+      var db = pk > 1e-4 ? Math.max(-48, 20 * Math.log10(pk)) : -48, lit = Math.round(((db + 48) / 48) * segs);
+      var hDb = hld > 1e-4 ? Math.max(-48, 20 * Math.log10(hld)) : -48, hSeg = Math.round(((hDb + 48) / 48) * segs);
+      for (var s = 0; s < segs; s++) {
+        ctx.fillStyle = (s < lit || (s === hSeg - 1 && hld > 0.01)) ? (s > 13 ? '#ff3355' : (s > 10 ? '#ffc13b' : '#35ff9b')) : 'rgba(255,255,255,0.07)';
+        ctx.fillRect(2 + s * sw, y, sw - 1.5, 6);
+      }
+    }
+    bar(3, pL, peakHoldL); bar(11, pR, peakHoldR);
+  }
+
+  function animTick() {
+    drawMeter();
+    if (activeVoices.size > 0) {
+      meterDecayFrames = 30;
+      var playing = new Set(); activeVoices.forEach(function(v) { playing.add(v.sampleId); });
+      playing.forEach(function(sid) { redrawSampleWaveforms(sid); if (inspectedNodeId === sid) drawInspectorWaveform(); });
+      rafId = requestAnimationFrame(animTick);
+    } else if (meterDecayFrames > 0) {
+      meterDecayFrames--; rafId = requestAnimationFrame(animTick);
+    } else {
+      peakHoldL = 0; peakHoldR = 0; drawMeter(); rafId = null;
+    }
+  }
+  function ensureAnimLoop() { meterDecayFrames = 30; if (!rafId) rafId = requestAnimationFrame(animTick); }
+  drawMeter();
+
+  /* =====================================================================
+     BOTTOM WAVE INTERACTION
+  ===================================================================== */
+  function hitTestMarkers(node, mx, w) {
+    var sx = normToScreenX(node.trimStart, w), ex = normToScreenX(node.trimEnd, w);
+    if (Math.abs(mx - sx) <= 10) return { type: 'start', idx: -1 };
+    if (Math.abs(mx - ex) <= 10) return { type: 'end', idx: -1 };
+    var bestIdx = -1, bestD = 9;
+    for (var i = 0; i < node.slices.length; i++) {
+      var d = Math.abs(mx - normToScreenX(node.slices[i], w)); if (d < bestD) { bestD = d; bestIdx = i; }
+    }
+    return bestIdx >= 0 ? { type: 'slice', idx: bestIdx } : null;
+  }
+
+  inspBox.addEventListener('mousemove', function(e) {
+    if (inspState.draggingType) return;
+    var node = inspectedNodeId ? vfs.get(inspectedNodeId) : null;
+    if (!node || node.type !== 'sample') { inspBox.style.cursor = 'crosshair'; return; }
+    var r = inspBox.getBoundingClientRect(), hit = hitTestMarkers(node, e.clientX - r.left, r.width), prev = inspState.hoverSliceIdx;
+    inspBox.style.cursor = hit ? 'ew-resize' : 'crosshair';
+    inspState.hoverSliceIdx = (hit && hit.type === 'slice') ? hit.idx : -1;
+    if (prev !== inspState.hoverSliceIdx) drawInspectorWaveform();
+  });
+
+  inspBox.addEventListener('contextmenu', function(e) {
+    e.preventDefault();
+    var node = inspectedNodeId ? vfs.get(inspectedNodeId) : null;
+    if (!node || node.type !== 'sample') return;
+    var r = inspBox.getBoundingClientRect(), mx = e.clientX - r.left, hit = hitTestMarkers(node, mx, r.width);
+    if (hit && hit.type === 'slice') {
+      var next = node.slices.slice(); next.splice(hit.idx, 1); setNodeSlicesWithUndo(node, next, 'REMOVE CHOP'); showToast('REMOVED CHOP');
+    } else {
+      var norm = snapToZeroCrossing(node.buffer, screenXToNorm(mx, r.width));
+      if (norm > node.trimStart + 0.005 && norm < node.trimEnd - 0.005) {
+        var next2 = node.slices.slice(); next2.push(norm); setNodeSlicesWithUndo(node, next2, 'ADD CHOP');
+        showToast('ADDED CHOP @ ' + formatDuration(norm * node.duration));
+      }
+    }
+  });
+
+  inspBox.addEventListener('dblclick', function(e) {
+    var node = inspectedNodeId ? vfs.get(inspectedNodeId) : null;
+    if (!node || node.type !== 'sample') return;
+    var r = inspBox.getBoundingClientRect(), mx = e.clientX - r.left;
+    if (hitTestMarkers(node, mx, r.width)) return;
+    var norm = snapToZeroCrossing(node.buffer, screenXToNorm(mx, r.width));
+    if (norm > node.trimStart + 0.005 && norm < node.trimEnd - 0.005) {
+      var next = node.slices.slice(); next.push(norm); setNodeSlicesWithUndo(node, next, 'ADD CHOP');
+      showToast('CHOP DROPPED @ ' + formatDuration(norm * node.duration));
+    }
+  });
+
+  inspBox.addEventListener('mousedown', function(e) {
+    if (e.button === 2) return;
+    var node = inspectedNodeId ? vfs.get(inspectedNodeId) : null;
+    if (!node || node.type !== 'sample') return;
+    var r = inspBox.getBoundingClientRect(), mx = e.clientX - r.left, my = e.clientY - r.top;
+
+    if (e.button === 1 || (e.button === 0 && e.shiftKey)) {
+      inspState.draggingType = 'pan'; var startX = e.clientX, origScroll = inspState.scrollNorm;
+      function onPan(ev) { var sp = 1 / inspState.zoom; inspState.scrollNorm = Math.max(0, Math.min(1 - sp, origScroll - ((ev.clientX - startX) / r.width) * sp)); drawInspectorWaveform(); }
+      function upPan() { window.removeEventListener('mousemove', onPan); window.removeEventListener('mouseup', upPan); inspState.draggingType = null; }
+      window.addEventListener('mousemove', onPan); window.addEventListener('mouseup', upPan);
+      return;
+    }
+
+    var hit = hitTestMarkers(node, mx, r.width);
+    if (hit) {
+      inspState.draggingType = hit.type; inspState.draggingSliceIdx = hit.idx;
+      var beforeSl = node.slices.slice(), beforeS = node.trimStart, beforeE = node.trimEnd;
+      function onDrag(ev) {
+        var rect = inspBox.getBoundingClientRect();
+        var snapped = snapToZeroCrossing(node.buffer, screenXToNorm(ev.clientX - rect.left, rect.width));
+        if (inspState.draggingType === 'start') node.trimStart = Math.max(0, Math.min(node.trimEnd - 0.005, snapped));
+        else if (inspState.draggingType === 'end') node.trimEnd = Math.min(1, Math.max(node.trimStart + 0.005, snapped));
+        else if (inspState.draggingType === 'slice') node.slices[inspState.draggingSliceIdx] = Math.max(node.trimStart + 0.004, Math.min(node.trimEnd - 0.004, snapped));
+        drawInspectorWaveform(); redrawSampleWaveforms(node.id);
+      }
+      function onUp() {
+        window.removeEventListener('mousemove', onDrag); window.removeEventListener('mouseup', onUp);
+        if (inspState.draggingType === 'slice') {
+          var afterSl = node.slices.slice().sort(function(a, b) { return a - b; }); node.slices = afterSl;
+          pushUndo({ label: 'MOVE CHOP', undo: function() { node.slices = beforeSl.slice(); }, redo: function() { node.slices = afterSl.slice(); } });
+        } else if (beforeS !== node.trimStart || beforeE !== node.trimEnd) {
+          var afterS = node.trimStart, afterE = node.trimEnd;
+          pushUndo({ label: 'TRIM', undo: function() { node.trimStart = beforeS; node.trimEnd = beforeE; }, redo: function() { node.trimStart = afterS; node.trimEnd = afterE; } });
+        }
+        inspState.draggingType = null; inspState.draggingSliceIdx = -1; renderAll();
+      }
+      window.addEventListener('mousemove', onDrag); window.addEventListener('mouseup', onUp);
+      return;
+    }
+
+    var clickNorm = screenXToNorm(mx, r.width);
+    if (node.slices.length > 0 && (e.altKey || my >= r.height - 18)) {
+      var regions = getSliceRegions(node);
+      for (var i = 0; i < regions.length; i++) if (clickNorm >= regions[i].start && clickNorm <= regions[i].end) { triggerSliceByIndex(i); return; }
+    }
+
+    inspState.activeSliceIdx = -1;
+    var playEnd = clickNorm < node.trimEnd - 0.005 ? node.trimEnd : 1.0;
+    playSampleRegion(node.id, clickNorm, playEnd, false);
+    drawInspectorWaveform();
+  });
+
+  inspBox.addEventListener('wheel', function(e) {
+    e.preventDefault();
+    var r = inspBox.getBoundingClientRect(), frac = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width));
+    if (e.shiftKey) {
+      var sp = 1 / inspState.zoom; inspState.scrollNorm = Math.max(0, Math.min(1 - sp, inspState.scrollNorm + (e.deltaY > 0 ? 0.12 : -0.12) * sp));
+    } else {
+      var prevSp = 1 / inspState.zoom, anchor = inspState.scrollNorm + frac * prevSp;
+      inspState.zoom = Math.max(1, Math.min(32, inspState.zoom * (e.deltaY < 0 ? 1.25 : 0.8)));
+      var newSp = 1 / inspState.zoom; inspState.scrollNorm = Math.max(0, Math.min(1 - newSp, anchor - frac * newSp));
+    }
+    drawInspectorWaveform();
+  }, { passive: false });
+
+  /* =====================================================================
+     TILE RENDERING (FOLDERS, ZIPS, AUDIO WAVES, VIDEO THUMBS, IMAGE THUMBS)
+  ===================================================================== */
+  function updateSelectionUI(tileId) {
+    var t = tiles[tileId];
+    document.querySelectorAll('#grid' + tileId + ' .node-card[data-id]').forEach(function(el) { el.classList.toggle('selected', t.selected.has(el.dataset.id)); });
+    var st = document.getElementById('statusLeft' + tileId);
+    st.textContent = st.textContent.replace(/\|\s*\d+\s*sel/, '| ' + t.selected.size + ' sel');
+  }
+
+  function renderTile(tileId) {
+    var t = tiles[tileId], grid = document.getElementById('grid' + tileId), crumbs = document.getElementById('crumbs' + tileId);
+    crumbs.innerHTML = '';
+    var chain = getPathChain(t.cwd);
+    chain.forEach(function(folder, idx) {
+      if (idx > 0) { var sep = document.createElement('span'); sep.className = 'crumb-sep'; sep.textContent = '/'; crumbs.appendChild(sep); }
+      var el = document.createElement('span');
+      el.className = 'crumb' + (idx === chain.length - 1 ? ' current' : '') + (folder.type === 'zip' ? ' is-zip' : '');
+      el.textContent = folder.type === 'zip' ? ('[ZIP] ' + folder.name) : folder.name;
+      el.onclick = function() { t.cwd = folder.id; t.selected.clear(); renderTile(tileId); };
+      el.ondragover = function(e) { e.preventDefault(); el.classList.add('drop-hover'); };
+      el.ondragleave = function() { el.classList.remove('drop-hover'); };
+      el.ondrop = function(e) { e.preventDefault(); e.stopPropagation(); el.classList.remove('drop-hover'); stopDndAutoScroll(); handleDropIntoFolder(e, folder.id); };
+      crumbs.appendChild(el);
+    });
+
+    var children = getChildren(t.cwd), q = t.filter.trim().toLowerCase();
+    if (q) children = children.filter(function(n) { return n.name.toLowerCase().indexOf(q) !== -1; });
+    if (t.chip !== 'all') children = children.filter(function(n) { return n.type === t.chip; });
+
+    var typeOrder = { folder: 0, zip: 1, video: 2, image: 3, sample: 4 };
+    children.sort(function(a, b) {
+      var aC = isContainer(a) ? 0 : 1, bC = isContainer(b) ? 0 : 1;
+      if (aC !== bC) return aC - bC;
+      if (t.sortBy === 'type') return (typeOrder[a.type] - typeOrder[b.type]) || a.name.localeCompare(b.name);
+      if (t.sortBy === 'dur') return (b.duration || 0) - (a.duration || 0);
+      if (t.sortBy === 'size') return (b.sizeBytes || 0) - (a.sizeBytes || 0);
+      return a.name.localeCompare(b.name);
+    });
+
+    grid.className = 'item-grid' + (t.viewMode === 'list' ? ' list-view' : '');
+    grid.innerHTML = '';
+
+    var curr = vfs.get(t.cwd);
+    if (curr && curr.parentId) {
+      var up = document.createElement('div'); up.className = 'node-card folder-card';
+      up.innerHTML = '<div class="folder-visual"><div class="folder-glyph"><div class="folder-tab"></div><div class="folder-body">.. UP</div></div></div><div class="node-meta"><span class="node-name">.. (Parent)</span><span class="node-sub">BACK</span></div>';
+      up.ondblclick = function() { t.cwd = curr.parentId; t.selected.clear(); renderTile(tileId); };
+      up.onclick = function(e) { e.stopPropagation(); focusTile(tileId); };
+      up.ondragover = function(e) { e.preventDefault(); up.classList.add('drop-target'); };
+      up.ondragleave = function() { up.classList.remove('drop-target'); };
+      up.ondrop = function(e) { e.preventDefault(); e.stopPropagation(); up.classList.remove('drop-target'); stopDndAutoScroll(); handleDropIntoFolder(e, curr.parentId); };
+      grid.appendChild(up);
+    }
+
+    grid.appendChild(buildLoadGridCard(tileId));
+
+    var counts = { dir: 0, zip: 0, aud: 0, vid: 0, img: 0 };
+    children.forEach(function(n) {
+      if (n.type === 'folder') { counts.dir++; grid.appendChild(buildContainerCard(n, tileId)); }
+      else if (n.type === 'zip') { counts.zip++; grid.appendChild(buildContainerCard(n, tileId)); }
+      else if (n.type === 'sample') { counts.aud++; grid.appendChild(buildSampleCard(n, tileId)); }
+      else if (n.type === 'video') { counts.vid++; grid.appendChild(buildMediaCard(n, tileId)); }
+      else if (n.type === 'image') { counts.img++; grid.appendChild(buildMediaCard(n, tileId)); }
+    });
+    var curZip = findEnclosingZip(t.cwd);
+    document.getElementById('statusLeft' + tileId).textContent =
+      counts.aud + ' aud, ' + counts.vid + ' vid, ' + counts.img + ' img | ' + t.selected.size + ' sel' + (curZip ? ' | IN ' + curZip.name : '');
+  }
+
+  function buildLoadGridCard(tileId) {
+    var card = document.createElement('div'); card.className = 'node-card load-card';
+    card.innerHTML =
+      '<div class="load-visual"><div class="load-glyph">+ MP4 / IMG / AUD</div><div class="load-btn-row">' +
+        '<button class="load-pill" data-lact="files">FILE</button><button class="load-pill" data-lact="dir">DIR</button>' +
+        '<button class="load-pill zip-p" data-lact="newzip">+ZIP</button><button class="load-pill demo-p" data-lact="demo">DEMO</button>' +
+      '</div></div><div class="node-meta"><span class="node-name">LOAD MEDIA / ZIP</span><span class="node-sub">IO</span></div>';
+    card.addEventListener('click', function(e) { e.stopPropagation(); focusTile(tileId); executeTileAction(tileId, 'import-files'); });
+    card.querySelector('[data-lact="files"]').addEventListener('click', function(e) { e.stopPropagation(); focusTile(tileId); executeTileAction(tileId, 'import-files'); });
+    card.querySelector('[data-lact="dir"]').addEventListener('click', function(e) { e.stopPropagation(); focusTile(tileId); executeTileAction(tileId, 'import-folder'); });
+    card.querySelector('[data-lact="newzip"]').addEventListener('click', function(e) { e.stopPropagation(); focusTile(tileId); executeTileAction(tileId, 'new-zip'); });
+    card.querySelector('[data-lact="demo"]').addEventListener('click', function(e) { e.stopPropagation(); focusTile(tileId); forgeDemoDrumKit(tiles[tileId].cwd); });
+    return card;
+  }
+
+  function startGroupDrag(e, tileId, nodeId) {
+    var t = tiles[tileId]; focusTile(tileId);
+    if (!t.selected.has(nodeId)) { t.selected.clear(); t.selected.add(nodeId); updateSelectionUI(tileId); }
+    dragState = { ids: Array.from(t.selected), sourceTile: tileId };
+    e.dataTransfer.setData('text/plain', JSON.stringify(dragState));
+    e.dataTransfer.effectAllowed = 'copyMove';
+    dragState.ids.forEach(function(id) { var el = document.querySelector('#grid' + tileId + ' .node-card[data-id="' + id + '"]'); if (el) el.classList.add('dragging'); });
+  }
+  function endGroupDrag() {
+    document.querySelectorAll('.node-card.dragging').forEach(function(el) { el.classList.remove('dragging'); });
+    stopDndAutoScroll(); dragState = null;
+  }
+
+  function buildContainerCard(node, tileId) {
+    var t = tiles[tileId], isZip = node.type === 'zip', stats = getContainerStats(node.id);
+    var card = document.createElement('div');
+    card.className = 'node-card ' + (isZip ? 'zip-card' : 'folder-card') + (t.selected.has(node.id) ? ' selected' : '');
+    card.dataset.id = node.id; card.dataset.tile = tileId; card.draggable = true;
+    card.innerHTML =
+      '<div class="folder-visual">' +
+        (isZip ? '<span class="zip-badge-corner">ZIP</span><button class="zip-dl-btn">SAVE</button>' : '') +
+        '<div class="folder-glyph"><div class="folder-tab"></div><div class="folder-body">' + (isZip ? stats.media : stats.items) + '</div></div>' +
+        (isZip ? '<span class="zip-size-badge">' + formatBytes(stats.bytes) + '</span>' : '') +
+      '</div><div class="node-meta"><span class="node-name" title="' + escapeHtml(node.name) + '">' + escapeHtml(node.name) + '</span><span class="node-sub">' + (isZip ? 'ZIP' : 'DIR') + '</span></div>';
+    if (isZip) card.querySelector('.zip-dl-btn').addEventListener('click', function(e) { e.stopPropagation(); downloadZipArchive(node.id); });
+    card.addEventListener('click', function(e) { e.stopPropagation(); focusTile(tileId); handleNodeSelect(tileId, node.id, e); });
+    card.addEventListener('dblclick', function(e) { e.stopPropagation(); t.cwd = node.id; t.selected.clear(); renderTile(tileId); });
+    card.addEventListener('contextmenu', function(e) {
+      e.preventDefault(); e.stopPropagation(); focusTile(tileId);
+      if (!t.selected.has(node.id)) { t.selected.clear(); t.selected.add(node.id); updateSelectionUI(tileId); }
+      openContextMenu(e.clientX, e.clientY, tileId, node);
+    });
+    card.addEventListener('dragstart', function(e) { startGroupDrag(e, tileId, node.id); });
+    card.addEventListener('dragend', endGroupDrag);
+    card.addEventListener('dragover', function(e) { e.preventDefault(); card.classList.add('drop-target'); updateDndAutoScroll(tileId, e.clientY); });
+    card.addEventListener('dragleave', function() { card.classList.remove('drop-target'); });
+    card.addEventListener('drop', function(e) { e.preventDefault(); e.stopPropagation(); card.classList.remove('drop-target'); stopDndAutoScroll(); handleDropIntoFolder(e, node.id); });
+    return card;
+  }
+
+  function buildMediaCard(node, tileId) {
+    var t = tiles[tileId], isVid = node.type === 'video';
+    var card = document.createElement('div');
+    card.className = 'node-card' + (t.selected.has(node.id) ? ' selected' : '');
+    card.dataset.id = node.id; card.dataset.tile = tileId; card.draggable = true;
+    var cornerBadge = isVid
+      ? (node.duration ? formatDuration(node.duration) : 'VID')
+      : (node.width ? (node.width + 'x' + node.height) : 'IMG');
+    card.innerHTML =
+      '<div class="media-visual">' +
+        (node.thumbUrl ? '<img src="' + node.thumbUrl + '" alt="" loading="lazy">' : '<div class="media-fallback">' + (isVid ? 'VIDEO CLIP' : 'IMAGE') + '</div>') +
+        '<span class="type-pill ' + (isVid ? 'vid' : 'img') + '">' + (isVid ? 'VID' : 'IMG') + '</span>' +
+        (isVid ? '<div class="vid-play-overlay">&#9654;</div>' : '') +
+        '<div class="wave-badge-dur">' + cornerBadge + '</div>' +
+      '</div>' +
+      '<div class="node-meta"><span class="node-name" title="' + escapeHtml(node.name) + '">' + escapeHtml(node.name) + '</span><span class="node-sub">' + formatBytes(node.sizeBytes) + '</span></div>';
+
+    card.addEventListener('click', function(e) {
+      e.stopPropagation(); focusTile(tileId); handleNodeSelect(tileId, node.id, e);
+      inspectNode(node.id);
+    });
+    card.addEventListener('dblclick', function(e) { e.stopPropagation(); openLightbox(node); });
+    card.addEventListener('contextmenu', function(e) {
+      e.preventDefault(); e.stopPropagation(); focusTile(tileId);
+      if (!t.selected.has(node.id)) { t.selected.clear(); t.selected.add(node.id); updateSelectionUI(tileId); }
+      openContextMenu(e.clientX, e.clientY, tileId, node);
+    });
+    card.addEventListener('dragstart', function(e) { startGroupDrag(e, tileId, node.id); });
+    card.addEventListener('dragend', endGroupDrag);
+    return card;
+  }
+
+  function buildSampleCard(node, tileId) {
+    var t = tiles[tileId], isPlaying = getSamplePlayheadNorm(node.id) !== null;
+    var badge = node.slices.length ? (node.slices.length + 1) + 'CH' : ((node.trimStart > 0.005 || node.trimEnd < 0.995) ? 'TRIM' : '');
+    var card = document.createElement('div');
+    card.className = 'node-card sample-card' + (t.selected.has(node.id) ? ' selected' : '') + (isPlaying ? ' playing' : '');
+    card.dataset.id = node.id; card.dataset.tile = tileId; card.draggable = true;
+    card.innerHTML =
+      '<div class="wave-visual"><canvas width="150" height="66"></canvas>' +
+        '<div class="wave-badge-play">&#9654;</div>' + (badge ? '<div class="wave-badge-trim">' + badge + '</div>' : '') +
+        '<div class="wave-badge-dur">' + formatDuration((node.trimEnd - node.trimStart) * node.duration) + '</div>' +
+      '</div><div class="node-meta"><span class="node-name" title="' + escapeHtml(node.name) + '">' + escapeHtml(node.name) + '</span><span class="node-sub">' + formatBytes(node.sizeBytes) + '</span></div>';
+
+    var canvas = card.querySelector('canvas');
+    if (!sampleCanvases.has(node.id)) sampleCanvases.set(node.id, new Set());
+    sampleCanvases.get(node.id).add({ canvas: canvas, theme: t.waveTheme });
+    drawThumbWave(canvas, node, t.waveTheme, getSamplePlayheadNorm(node.id));
+
+    card.querySelector('.wave-badge-play').addEventListener('click', function(e) {
+      e.stopPropagation(); focusTile(tileId); inspectNode(node.id);
+      if (getSamplePlayheadNorm(node.id) !== null) stopSampleVoices(node.id); else playSampleRegion(node.id);
+    });
+    card.addEventListener('click', function(e) {
+      e.stopPropagation(); focusTile(tileId); handleNodeSelect(tileId, node.id, e); inspectNode(node.id);
+      if (!e.ctrlKey && !e.shiftKey && !e.metaKey) playSampleRegion(node.id);
+    });
+    card.addEventListener('contextmenu', function(e) {
+      e.preventDefault(); e.stopPropagation(); focusTile(tileId);
+      if (!t.selected.has(node.id)) { t.selected.clear(); t.selected.add(node.id); updateSelectionUI(tileId); }
+      openContextMenu(e.clientX, e.clientY, tileId, node);
+    });
+    card.addEventListener('dragstart', function(e) { startGroupDrag(e, tileId, node.id); });
+    card.addEventListener('dragend', endGroupDrag);
+    return card;
+  }
+
+  function handleNodeSelect(tileId, nodeId, e) {
+    var t = tiles[tileId];
+    if (e.ctrlKey || e.metaKey) { if (t.selected.has(nodeId)) t.selected.delete(nodeId); else t.selected.add(nodeId); }
+    else if (e.shiftKey && t.lastClicked) {
+      var ids = Array.from(document.querySelectorAll('#grid' + tileId + ' .node-card[data-id]')).map(function(c) { return c.dataset.id; });
+      var a = ids.indexOf(t.lastClicked), b = ids.indexOf(nodeId);
+      if (a >= 0 && b >= 0) for (var i = Math.min(a, b); i <= Math.max(a, b); i++) t.selected.add(ids[i]);
+    } else { t.selected.clear(); t.selected.add(nodeId); }
+    t.lastClicked = nodeId; updateSelectionUI(tileId);
+  }
+
+  function focusTile(tileId) {
+    activeTileId = tileId;
+    document.getElementById('tileA').classList.toggle('focused', tileId === 'A');
+    document.getElementById('tileB').classList.toggle('focused', tileId === 'B');
+  }
+
+  function renderAll() {
+    sampleCanvases.clear(); renderTile('A'); renderTile('B'); drawInspectorWaveform(); updatePanicUI();
+  }
+
+  /* =====================================================================
+     SPLIT RAIL, DND AUTO-SCROLL & MARQUEE SELECTION
+  ===================================================================== */
+  var splitRail = document.getElementById('splitRail'), tileAEl = document.getElementById('tileA'), tileBEl = document.getElementById('tileB'), dualWs = document.getElementById('dualWorkspace');
+  splitRail.addEventListener('mousedown', function(e) {
+    e.preventDefault(); splitRail.classList.add('dragging');
+    function onM(ev) {
+      var r = dualWs.getBoundingClientRect(), pct = Math.max(24, Math.min(76, ((ev.clientX - r.left) / r.width) * 100));
+      tileAEl.style.flex = '0 0 calc(' + pct.toFixed(2) + '% - 5px)'; tileBEl.style.flex = '1 1 auto';
+    }
+    function onU() { splitRail.classList.remove('dragging'); window.removeEventListener('mousemove', onM); window.removeEventListener('mouseup', onU); drawInspectorWaveform(); }
+    window.addEventListener('mousemove', onM); window.addEventListener('mouseup', onU);
+  });
+  splitRail.addEventListener('dblclick', function() { tileAEl.style.flex = '1 1 50%'; tileBEl.style.flex = '1 1 50%'; });
+
+  var dndBody = null, dndVel = 0, dndRaf = null;
+  function edgeVel(bodyEl, y) {
+    var r = bodyEl.getBoundingClientRect(), edge = 44;
+    if (y < r.top + edge) return -Math.ceil(Math.min(2.2, (r.top + edge - y) / edge) * 11);
+    if (y > r.bottom - edge) return Math.ceil(Math.min(2.2, (y - (r.bottom - edge)) / edge) * 11);
+    return 0;
+  }
+  function dndTick() { if (!dndBody || !dndVel) { dndRaf = null; return; } dndBody.scrollTop += dndVel; dndRaf = requestAnimationFrame(dndTick); }
+  function updateDndAutoScroll(tid, y) { var b = document.getElementById('body' + tid), v = edgeVel(b, y); if (v) { dndBody = b; dndVel = v; if (!dndRaf) dndRaf = requestAnimationFrame(dndTick); } else stopDndAutoScroll(); }
+  function stopDndAutoScroll() { dndBody = null; dndVel = 0; if (dndRaf) { cancelAnimationFrame(dndRaf); dndRaf = null; } }
+
+  var suppressClick = false;
+  ['A', 'B'].forEach(function(tid) {
+    var tileEl = document.getElementById('tile' + tid), bodyEl = document.getElementById('body' + tid), mqEl = document.getElementById('marquee' + tid);
+    bodyEl.addEventListener('contextmenu', function(e) { if (e.target.closest('.node-card')) return; e.preventDefault(); focusTile(tid); openContextMenu(e.clientX, e.clientY, tid, null); });
+    bodyEl.addEventListener('click', function() { if (suppressClick) return; focusTile(tid); tiles[tid].selected.clear(); updateSelectionUI(tid); });
+    bodyEl.addEventListener('dragover', function(e) { e.preventDefault(); tileEl.classList.add('drag-over-tile'); updateDndAutoScroll(tid, e.clientY); });
+    bodyEl.addEventListener('dragleave', function(e) { if (!bodyEl.contains(e.relatedTarget)) { tileEl.classList.remove('drag-over-tile'); stopDndAutoScroll(); } });
+    bodyEl.addEventListener('drop', function(e) { e.preventDefault(); tileEl.classList.remove('drag-over-tile'); stopDndAutoScroll(); handleDropIntoFolder(e, tiles[tid].cwd); });
+
+    bodyEl.addEventListener('mousedown', function(e) {
+      if (e.button !== 0 || e.target.closest('.node-card')) return;
+      focusTile(tid); closeAllMenus();
+      var ir = bodyEl.getBoundingClientRect(), sx = e.clientX, sy = e.clientY;
+      var scx = e.clientX - ir.left + bodyEl.scrollLeft, scy = e.clientY - ir.top + bodyEl.scrollTop;
+      var cx = sx, cy = sy, base = (e.ctrlKey || e.metaKey || e.shiftKey) ? new Set(tiles[tid].selected) : new Set(), active = false, sRaf = null;
+      function updMq() {
+        var r = bodyEl.getBoundingClientRect();
+        var curX = Math.max(0, Math.min(Math.max(bodyEl.clientWidth, bodyEl.scrollWidth) - 2, cx - r.left + bodyEl.scrollLeft));
+        var curY = Math.max(0, Math.min(Math.max(bodyEl.clientHeight, bodyEl.scrollHeight) - 2, cy - r.top + bodyEl.scrollTop));
+        var l = Math.min(scx, curX), t = Math.min(scy, curY), ri = Math.max(scx, curX), b = Math.max(scy, curY);
+        mqEl.style.display = 'block'; mqEl.style.left = l + 'px'; mqEl.style.top = t + 'px'; mqEl.style.width = (ri - l) + 'px'; mqEl.style.height = (b - t) + 'px';
+        var next = new Set(base);
+        document.querySelectorAll('#grid' + tid + ' .node-card[data-id]').forEach(function(c) {
+          var cr = c.getBoundingClientRect();
+          var cL = cr.left - r.left + bodyEl.scrollLeft, cT = cr.top - r.top + bodyEl.scrollTop, cR = cr.right - r.left + bodyEl.scrollLeft, cB = cr.bottom - r.top + bodyEl.scrollTop;
+          if (!(cR < l || cL > ri || cB < t || cT > b)) next.add(c.dataset.id);
+        });
+        tiles[tid].selected = next; updateSelectionUI(tid);
+      }
+      function mqTick() {
+        if (!active) { sRaf = null; return; }
+        var v = edgeVel(bodyEl, cy);
+        if (v) { var pt = bodyEl.scrollTop; bodyEl.scrollTop += v; if (bodyEl.scrollTop !== pt) updMq(); sRaf = requestAnimationFrame(mqTick); }
+        else sRaf = null;
+      }
+      function onM(ev) {
+        cx = ev.clientX; cy = ev.clientY;
+        if (!active && Math.hypot(cx - sx, cy - sy) < 4) return;
+        active = true; updMq(); if (!sRaf && edgeVel(bodyEl, cy)) sRaf = requestAnimationFrame(mqTick);
+      }
+      function onU() {
+        window.removeEventListener('mousemove', onM); window.removeEventListener('mouseup', onU);
+        if (sRaf) cancelAnimationFrame(sRaf); mqEl.style.display = 'none';
+        if (active) { suppressClick = true; setTimeout(function() { suppressClick = false; }, 0); }
+      }
+      window.addEventListener('mousemove', onM); window.addEventListener('mouseup', onU);
+    });
+  });
+
+  /* =====================================================================
+     UNIVERSAL MEDIA IMPORT (AUDIO, VIDEO + THUMB, IMAGE + THUMB, DIR, ZIP)
+  ===================================================================== */
+  async function mountBlobOrBuffer(name, blob, parentId) {
+    var mime = blob.type || guessMime(name, '');
+    if (mime.startsWith('image/') || isImageExt(name)) {
+      var url = URL.createObjectURL(blob);
+      var meta = await generateImageThumb(blob, url);
+      var node = createImageNode(makeUniqueName(name, parentId), parentId, blob, meta, url);
+      if (!inspectedNodeId) inspectNode(node.id);
+      return 1;
+    }
+    if (mime.startsWith('video/') || isVideoExt(name)) {
+      var vUrl = URL.createObjectURL(blob);
+      var vMeta = await generateVideoThumb(vUrl);
+      var vNode = createVideoNode(makeUniqueName(name, parentId), parentId, blob, vMeta, vUrl);
+      if (!inspectedNodeId) inspectNode(vNode.id);
+      return 1;
+    }
+    try {
+      var decoded = await audioCtx.decodeAudioData(await blob.arrayBuffer());
+      var sNode = createSampleNode(makeUniqueName(name, parentId), parentId, decoded);
+      if (!inspectedNodeId) inspectNode(sNode.id);
+      return 1;
+    } catch (err) { return 0; }
+  }
+
+  async function mountSingleFile(file, parentId) {
+    if (file.name.toLowerCase().endsWith('.zip')) {
+      try {
+        var extracted = await parseZipBuffer(await file.arrayBuffer());
+        var zDir = createZipFolder(file.name, parentId), cache = new Map(), mounted = 0;
+        for (var i = 0; i < extracted.length; i++) {
+          var item = extracted[i], parts = item.path.split('/').filter(Boolean), fn = parts.pop(); if (!fn) continue;
+          var cp = zDir.id, key = '';
+          for (var p = 0; p < parts.length; p++) { key += '/' + parts[p]; if (!cache.has(key)) cache.set(key, createFolder(parts[p], cp).id); cp = cache.get(key); }
+          var b = new Blob([item.buffer], { type: guessMime(fn, '') });
+          mounted += await mountBlobOrBuffer(fn, b, cp);
+        }
+        return Math.max(1, mounted);
+      } catch (err) { showToast('ZIP ERROR: ' + file.name, true); return 0; }
+    }
+    return await mountBlobOrBuffer(file.name, file, parentId);
+  }
+
+  async function handleDropIntoFolder(e, targetId) {
+    if (dragState && dragState.ids.length) {
+      if (e.shiftKey) moveNodes(dragState.ids, targetId); else copyNodes(dragState.ids, targetId);
+      dragState = null; return;
+    }
+    var items = e.dataTransfer ? e.dataTransfer.items : null;
+    if (items && items.length && typeof items[0].webkitGetAsEntry === 'function') {
+      var entries = [];
+      for (var i = 0; i < items.length; i++) { var ent = items[i].webkitGetAsEntry(); if (ent) entries.push(ent); }
+      if (entries.length) {
+        var res = { ok: 0, fail: 0 };
+        for (var j = 0; j < entries.length; j++) await importEntry(entries[j], targetId, res);
+        if (res.ok > 0) { renderAll(); showToast('MOUNTED ' + res.ok + ' MEDIA FILE(S)' + (res.fail ? ' (' + res.fail + ' SKIPPED)' : '')); }
+        else if (res.fail > 0) showToast('UNSUPPORTED FILE FORMAT', true);
+        return;
+      }
+    }
+    if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) await importFileList(e.dataTransfer.files, targetId);
+  }
+
+  async function importEntry(entry, parentId, res) {
+    if (entry.isDirectory) {
+      var dir = createFolder(entry.name, parentId), reader = entry.createReader();
+      var subs = await new Promise(function(resolve) {
+        var all = [];
+        function next() { reader.readEntries(function(b) { if (!b.length) resolve(all); else { all = all.concat(b); next(); } }, function() { resolve(all); }); }
+        next();
+      });
+      for (var i = 0; i < subs.length; i++) await importEntry(subs[i], dir.id, res);
+    } else if (entry.isFile) {
+      var f = await new Promise(function(r) { entry.file(r, function() { r(null); }); });
+      if (f) { var c = await mountSingleFile(f, parentId); if (c > 0) res.ok += c; else res.fail++; }
+    }
+  }
+
+  async function importFileList(fileList, targetId) {
+    var ok = 0, fail = 0, cache = new Map();
+    for (var i = 0; i < fileList.length; i++) {
+      var f = fileList[i], dest = targetId;
+      if (f.webkitRelativePath && f.webkitRelativePath.indexOf('/') !== -1) {
+        var parts = f.webkitRelativePath.split('/'); parts.pop();
+        var pk = '', cp = targetId;
+        for (var p = 0; p < parts.length; p++) {
+          pk += '/' + parts[p];
+          if (!cache.has(pk)) {
+            var ex = getChildren(cp).find(function(k) { return k.type === 'folder' && k.name === parts[p]; });
+            cache.set(pk, ex ? ex.id : createFolder(parts[p], cp).id);
+          }
+          cp = cache.get(pk);
+        }
+        dest = cp;
+      }
+      var n = await mountSingleFile(f, dest);
+      if (n > 0) ok += n; else fail++;
+    }
+    if (ok > 0) {
+      var z = findEnclosingZip(targetId); renderAll(); if (z) flashZipCard(z.id);
+      showToast('MOUNTED ' + ok + ' FILE(S)' + (fail ? ' (' + fail + ' SKIPPED)' : ''));
+    } else if (fail > 0) showToast('UNSUPPORTED FILE FORMAT', true);
+  }
+
+  /* =====================================================================
+     ACTIONS & FULL GROUP-AWARE RIGHT-CLICK MENU
+  ===================================================================== */
+  var pendingImportTile = 'A';
+  var fileInputMedia = document.getElementById('fileInputMedia'), fileInputFolder = document.getElementById('fileInputFolder');
+  fileInputMedia.addEventListener('change', async function() { if (fileInputMedia.files.length) { await importFileList(fileInputMedia.files, tiles[pendingImportTile].cwd); fileInputMedia.value = ''; } });
+  fileInputFolder.addEventListener('change', async function() { if (fileInputFolder.files.length) { await importFileList(fileInputFolder.files, tiles[pendingImportTile].cwd); fileInputFolder.value = ''; } });
+
+  function executeSystemAction(act) {
+    if (act === 'forge-demo') forgeDemoDrumKit(tiles[activeTileId].cwd);
+    else if (act === 'swap-tiles') { var tmp = tiles.A.cwd; tiles.A.cwd = tiles.B.cwd; tiles.B.cwd = tmp; tiles.A.selected.clear(); tiles.B.selected.clear(); renderAll(); showToast('SWAPPED TILE A <-> B'); }
+    else if (act === 'mirror-ab') { tiles.B.cwd = tiles.A.cwd; tiles.B.selected.clear(); renderAll(); showToast('SYNCED TILE B TO A'); }
+    else if (act === 'reset-split') { tileAEl.style.flex = '1 1 50%'; tileBEl.style.flex = '1 1 50%'; }
+    else if (act === 'export-vfs') downloadZipArchive(ROOT_ID, 'NEXUS_MP4_FOUNDRY_SNAPSHOT.zip');
+    else if (act === 'wipe-vfs') {
+      stopAllVoices(true); stopVideoDeck(); vfs.clear();
+      vfs.set(ROOT_ID, { id: ROOT_ID, type: 'folder', name: 'ROOT', parentId: null });
+      var d1 = createFolder('MEDIA', ROOT_ID), d2 = createFolder('ARCHIVE', ROOT_ID); createZipFolder('PACK_01.zip', d2.id);
+      tiles.A.cwd = d1.id; tiles.B.cwd = d2.id; tiles.A.selected.clear(); tiles.B.selected.clear();
+      inspectedNodeId = null; setActiveDeckPanel('audio');
+      undoStack.length = 0; redoStack.length = 0; updateUndoButtons(); renderAll(); showToast('WORKSPACE RESET');
+    }
+  }
+
+  async function executeTileAction(tileId, action) {
+    focusTile(tileId);
+    var t = tiles[tileId], other = tiles[tileId === 'A' ? 'B' : 'A'], selNodes = [];
+    t.selected.forEach(function(id) { var n = vfs.get(id); if (n) selNodes.push(n); });
+
+    switch (action) {
+      case 'forge-demo': forgeDemoDrumKit(t.cwd); break;
+      case 'new-folder':
+        openModal('NEW FOLDER', '<div class="modal-field"><label>FOLDER NAME</label><input type="text" id="mFolderName" value="NEW_FOLDER"></div>',
+          function() { var n = document.getElementById('mFolderName').value.trim(); if (n) { createFolder(n, t.cwd); renderAll(); } });
+        break;
+      case 'new-zip':
+        openModal('NEW .ZIP ARCHIVE', '<div class="modal-field"><label>ARCHIVE NAME</label><input type="text" id="mZipName" value="MEDIA_PACK.zip"></div>',
+          function() { var n = document.getElementById('mZipName').value.trim(); if (n) { var z = createZipFolder(n, t.cwd); renderAll(); flashZipCard(z.id); } });
+        break;
+      case 'zip-selected':
+        if (!selNodes.length) break;
+        openModal('PACK SELECTION INTO .ZIP', '<div class="modal-field"><label>ARCHIVE NAME (' + selNodes.length + ' ITEMS)</label><input type="text" id="mPackZipName" value="PACKED_MEDIA.zip"></div>',
+          function() {
+            var n = document.getElementById('mPackZipName').value.trim(); if (!n) return;
+            var z = createZipFolder(n, t.cwd);
+            selNodes.forEach(function(sn) { if (!isDescendant(z.id, sn.id)) cloneNodeRecursive(sn.id, z.id, ''); });
+            renderAll(); flashZipCard(z.id); showToast('PACKED ' + selNodes.length + ' ITEMS');
+          });
+        break;
+      case 'zip-download-sel': {
+        if (!selNodes.length) break;
+        var entries = [];
+        for (var zi = 0; zi < selNodes.length; zi++) await collectZipEntriesAsync(selNodes[zi], '', entries);
+        if (!entries.length) { showToast('NO MEDIA FILES IN SELECTION', true); break; }
+        var url = URL.createObjectURL(buildZipBlob(entries)), a = document.createElement('a');
+        a.href = url; a.download = 'GROUP_' + entries.length + '_FILES.zip'; a.click();
+        setTimeout(function() { URL.revokeObjectURL(url); }, 1200);
+        showToast('DOWNLOADED ' + entries.length + ' FILES AS .ZIP');
+        break;
+      }
+      case 'import-files': pendingImportTile = tileId; fileInputMedia.click(); break;
+      case 'import-folder': pendingImportTile = tileId; fileInputFolder.click(); break;
+      case 'export-zip': {
+        var zT = selNodes.find(function(n) { return n.type === 'zip'; }) || findEnclosingZip(t.cwd);
+        if (zT) downloadZipArchive(zT.id);
+        break;
+      }
+      case 'export-file': {
+        var files = selNodes.filter(function(n) { return !isContainer(n); });
+        if (files.length === 1) exportSingleNodeFile(files[0].id);
+        else if (files.length > 1) executeTileAction(tileId, 'zip-download-sel');
+        break;
+      }
+      case 'cut': if (selNodes.length) { clipboard = { mode: 'cut', ids: selNodes.map(function(n) { return n.id; }) }; showToast('CUT ' + selNodes.length); } break;
+      case 'copy': if (selNodes.length) { clipboard = { mode: 'copy', ids: selNodes.map(function(n) { return n.id; }) }; showToast('COPIED ' + selNodes.length); } break;
+      case 'paste':
+        if (!clipboard.ids.length) break;
+        if (clipboard.mode === 'cut') { moveNodes(clipboard.ids, t.cwd); clipboard = { mode: null, ids: [] }; }
+        else copyNodes(clipboard.ids, t.cwd);
+        break;
+      case 'duplicate':
+        if (!selNodes.length) break;
+        var dups = []; selNodes.forEach(function(sn) { var dn = cloneNodeRecursive(sn.id, t.cwd, '_dup'); if (dn) collectSubtreeNodes(dn.id, dups); });
+        pushUndo({ label: 'DUPLICATE ' + selNodes.length, undo: function() { dups.forEach(function(n) { vfs.delete(n.id); }); }, redo: function() { dups.forEach(function(n) { vfs.set(n.id, n); }); } });
+        renderAll(); break;
+      case 'rename': openBulkRenameModal(selNodes); break;
+      case 'delete': if (selNodes.length) deleteNodesWithUndo(selNodes.map(function(n) { return n.id; })); break;
+      case 'move-other': if (selNodes.length) moveNodes(selNodes.map(function(n) { return n.id; }), other.cwd); break;
+      case 'copy-other': if (selNodes.length) copyNodes(selNodes.map(function(n) { return n.id; }), other.cwd); break;
+      case 'merge-chain': mergeSelectedIntoChain(tileId, selNodes); break;
+      case 'select-all': t.selected.clear(); getChildren(t.cwd).forEach(function(n) { t.selected.add(n.id); }); updateSelectionUI(tileId); break;
+      case 'invert-sel': getChildren(t.cwd).forEach(function(n) { if (t.selected.has(n.id)) t.selected.delete(n.id); else t.selected.add(n.id); }); updateSelectionUI(tileId); break;
+      case 'dsp-reverse': applyDspToNodes(selNodes, 'reverse'); break;
+      case 'dsp-normalize': applyDspToNodes(selNodes, 'normalize'); break;
+      case 'dsp-autotrim': applyDspToNodes(selNodes, 'autotrim'); break;
+      case 'dsp-mono': applyDspToNodes(selNodes, 'mono'); break;
+      case 'dsp-dc': applyDspToNodes(selNodes, 'dc'); break;
+      case 'dsp-fadein': applyDspToNodes(selNodes, 'fadein'); break;
+      case 'dsp-fadeout': applyDspToNodes(selNodes, 'fadeout'); break;
+      case 'view-grid': t.viewMode = 'grid'; renderTile(tileId); break;
+      case 'view-list': t.viewMode = 'list'; renderTile(tileId); break;
+      case 'sort-name': t.sortBy = 'name'; renderTile(tileId); break;
+      case 'sort-type': t.sortBy = 'type'; renderTile(tileId); break;
+      case 'sort-dur': t.sortBy = 'dur'; renderTile(tileId); break;
+      case 'sort-size': t.sortBy = 'size'; renderTile(tileId); break;
+      case 'theme-cyan': t.waveTheme = 'cyan'; renderAll(); break;
+      case 'theme-amber': t.waveTheme = 'amber'; renderAll(); break;
+      case 'theme-emerald': t.waveTheme = 'emerald'; renderAll(); break;
+      case 'theme-crimson': t.waveTheme = 'crimson'; renderAll(); break;
+      case 'go-up': { var cur = vfs.get(t.cwd); if (cur && cur.parentId) { t.cwd = cur.parentId; t.selected.clear(); renderTile(tileId); } break; }
+      case 'go-root': t.cwd = ROOT_ID; t.selected.clear(); renderTile(tileId); break;
+    }
+  }
+
+  var openMenuTrigger = null;
+  function closeAllMenus() {
+    if (openMenuTrigger) { openMenuTrigger.classList.remove('open'); openMenuTrigger = null; }
+    document.getElementById('ctxMenu').classList.remove('open');
+  }
+
+  function openContextMenu(x, y, tileId, node) {
+    closeAllMenus();
+    var ctx = document.getElementById('ctxMenu'), t = tiles[tileId], otherId = tileId === 'A' ? 'B' : 'A';
+    var selNodes = []; t.selected.forEach(function(id) { var n = vfs.get(id); if (n) selNodes.push(n); });
+    var html = '';
+
+    if (!node) {
+      html =
+        '<div class="menu-header">TILE ' + tileId + ' WORKSPACE</div>' +
+        '<div class="menu-item" data-cact="import-files">Load Media (MP4 / IMG / AUD / ZIP)...<span class="k">FILE</span></div>' +
+        '<div class="menu-item" data-cact="import-folder">Load Local Directory...<span class="k">DIR</span></div>' +
+        '<div class="menu-item" data-cact="forge-demo">Forge Synth Drum Kit Here<span class="k">DEMO</span></div>' +
+        '<div class="menu-sep"></div>' +
+        '<div class="menu-item" data-cact="new-folder">New Folder<span class="k">Ctrl+Shift+N</span></div>' +
+        '<div class="menu-item" data-cact="new-zip">New .ZIP Archive<span class="k">+ZIP</span></div>' +
+        (clipboard.ids.length ? '<div class="menu-item accent" data-cact="paste">Paste ' + clipboard.ids.length + ' Item(s) Here<span class="k">Ctrl+V</span></div>' : '') +
+        '<div class="menu-sep"></div>' +
+        '<div class="menu-item" data-cact="select-all">Select All<span class="k">Ctrl+A</span></div>' +
+        '<div class="menu-item" data-cact="go-up">Parent Folder<span class="k">Bksp</span></div>';
+    } else if (selNodes.length > 1) {
+      var audC = selNodes.filter(function(n) { return n.type === 'sample'; }).length;
+      var vidC = selNodes.filter(function(n) { return n.type === 'video'; }).length;
+      var imgC = selNodes.filter(function(n) { return n.type === 'image'; }).length;
+      var tagParts = [];
+      if (audC) tagParts.push(audC + ' AUD'); if (vidC) tagParts.push(vidC + ' VID'); if (imgC) tagParts.push(imgC + ' IMG');
+      html =
+        '<div class="menu-header group">GROUP (' + selNodes.length + ' ITEMS' + (tagParts.length ? ': ' + tagParts.join(', ') : '') + ')</div>' +
+        '<div class="menu-item accent" data-cact="rename">Bulk Rename Foundry...<span class="k">F2</span></div>' +
+        (audC >= 2 ? '<div class="menu-item accent" data-cact="merge-chain">Merge ' + audC + ' Audio &rarr; Sample Chain<span class="k">CHAIN</span></div>' : '') +
+        '<div class="menu-item" data-cact="zip-selected">Pack Group into .ZIP Folder<span class="k">PACK</span></div>' +
+        '<div class="menu-item" data-cact="zip-download-sel">Download Group as .ZIP<span class="k">SAVE</span></div>' +
+        '<div class="menu-sep"></div>' +
+        '<div class="menu-item" data-cact="copy-other">Copy Group &rarr; Tile ' + otherId + '</div>' +
+        '<div class="menu-item" data-cact="move-other">Move Group &rarr; Tile ' + otherId + '</div>' +
+        '<div class="menu-item" data-cact="cut">Cut Group<span class="k">Ctrl+X</span></div>' +
+        '<div class="menu-item" data-cact="copy">Copy Group<span class="k">Ctrl+C</span></div>' +
+        '<div class="menu-item" data-cact="duplicate">Duplicate Group<span class="k">Ctrl+D</span></div>' +
+        '<div class="menu-item" data-cact="invert-sel">Invert Selection</div>' +
+        (audC > 0 ?
+          '<div class="menu-sep"></div><div class="menu-header">BATCH AUDIO DSP (' + audC + ')</div>' +
+          '<div class="menu-item" data-cact="dsp-normalize">Batch Normalize (-0.5dB)</div>' +
+          '<div class="menu-item" data-cact="dsp-autotrim">Batch Auto-Trim Silence</div>' +
+          '<div class="menu-item" data-cact="dsp-fadein">Batch Fade-In (25ms)</div>' +
+          '<div class="menu-item" data-cact="dsp-fadeout">Batch Fade-Out (65ms)</div>' +
+          '<div class="menu-item" data-cact="dsp-mono">Batch Sum to Mono</div>' +
+          '<div class="menu-item" data-cact="dsp-dc">Batch Remove DC Offset</div>' +
+          '<div class="menu-item" data-cact="dsp-reverse">Batch Reverse</div>' : '') +
+        '<div class="menu-sep"></div>' +
+        '<div class="menu-item danger" data-cact="delete">Delete All ' + selNodes.length + ' Selected<span class="k">Del</span></div>';
+    } else {
+      var isSmp = node.type === 'sample', isVid = node.type === 'video', isImg = node.type === 'image', isZip = node.type === 'zip';
+      html =
+        '<div class="menu-header">' + escapeHtml(node.name.slice(0, 26)) + '</div>' +
+        (isSmp ? '<div class="menu-item" data-cact="play">Audition Audio<span class="k">SPACE</span></div>' : '') +
+        (isVid || isImg ? '<div class="menu-item accent" data-cact="lightbox">Open Fullscreen Lightbox<span class="k">DBL</span></div>' : '') +
+        (isVid ? '<div class="menu-item accent" data-cact="extract-audio">Extract Audio Track &rarr; WAV<span class="k">RIP</span></div>' : '') +
+        (isImg ? '<div class="menu-item" data-cact="rotate-img">Rotate 90&deg; Clockwise<span class="k">ROT</span></div>' : '') +
+        (isContainer(node) ? '<div class="menu-item" data-cact="open-dir">' + (isZip ? 'Explore .ZIP Archive' : 'Open Folder') + '<span class="k">ENTER</span></div>' : '') +
+        (isZip ? '<div class="menu-item accent" data-cact="dl-zip">Download Real .ZIP<span class="k">SAVE</span></div>' : '') +
+        '<div class="menu-sep"></div>' +
+        '<div class="menu-item" data-cact="copy-other">Copy &rarr; Tile ' + otherId + '</div>' +
+        '<div class="menu-item" data-cact="move-other">Move &rarr; Tile ' + otherId + '</div>' +
+        '<div class="menu-item" data-cact="zip-selected">Pack into .ZIP</div>' +
+        '<div class="menu-item" data-cact="duplicate">Duplicate<span class="k">Ctrl+D</span></div>' +
+        '<div class="menu-item" data-cact="rename">Rename<span class="k">F2</span></div>' +
+        (isSmp ?
+          '<div class="menu-sep"></div>' +
+          '<div class="menu-item" data-cact="dsp-normalize">Normalize (-0.5dB)</div>' +
+          '<div class="menu-item" data-cact="dsp-autotrim">Auto-Trim Silence</div>' +
+          '<div class="menu-item" data-cact="dsp-mono">Sum to Mono</div>' +
+          '<div class="menu-item" data-cact="dsp-reverse">Reverse Audio</div>' : '') +
+        (!isContainer(node) ? '<div class="menu-item accent" data-cact="export-file">Save File to Disk<span class="k">SAVE</span></div>' : '') +
+        '<div class="menu-sep"></div>' +
+        '<div class="menu-item danger" data-cact="delete">Delete<span class="k">Del</span></div>';
+    }
+
+    ctx.innerHTML = html; ctx.classList.add('open');
+    var cw = ctx.offsetWidth || 250, ch = ctx.offsetHeight || 300;
+    ctx.style.left = Math.max(6, Math.min(window.innerWidth - cw - 8, x)) + 'px';
+    ctx.style.top = Math.max(6, Math.min(window.innerHeight - ch - 8, y)) + 'px';
+    ctx.querySelectorAll('.menu-item').forEach(function(el) {
+      el.onclick = function(ev) {
+        ev.stopPropagation(); var act = el.dataset.cact; closeAllMenus();
+        if (act === 'play' && node) playSampleRegion(node.id);
+        else if (act === 'lightbox' && node) openLightbox(node);
+        else if (act === 'extract-audio' && node) extractAudioFromVideo(node);
+        else if (act === 'rotate-img' && node) rotateImageNode90(node);
+        else if (act === 'dl-zip' && node) downloadZipArchive(node.id);
+        else if (act === 'open-dir' && node) { tiles[tileId].cwd = node.id; tiles[tileId].selected.clear(); renderTile(tileId); }
+        else executeTileAction(tileId, act);
+      };
+    });
+  }
+
+  /* =====================================================================
+     UI CONTROLS, KNOB, DECK BUTTONS & KEYBOARD SHORTCUTS
+  ===================================================================== */
+  document.querySelectorAll('.menu-trigger').forEach(function(trig) {
+    trig.addEventListener('click', function(e) {
+      e.stopPropagation(); var was = trig.classList.contains('open'); closeAllMenus();
+      if (!was) { trig.classList.add('open'); openMenuTrigger = trig; if (trig.dataset.tile) focusTile(trig.dataset.tile); }
+    });
+  });
+  document.querySelectorAll('.menu-item[data-act]').forEach(function(i) {
+    i.addEventListener('click', function(e) { e.stopPropagation(); var tid = i.closest('.menu-trigger').dataset.tile, a = i.dataset.act; closeAllMenus(); executeTileAction(tid, a); });
+  });
+  document.querySelectorAll('.menu-item[data-sact]').forEach(function(i) {
+    i.addEventListener('click', function(e) { e.stopPropagation(); var a = i.dataset.sact; closeAllMenus(); executeSystemAction(a); });
+  });
+  document.querySelectorAll('.mini-rubber[data-quick]').forEach(function(b) {
+    b.addEventListener('click', function(e) {
+      e.stopPropagation(); var tid = b.dataset.tile, q = b.dataset.quick;
+      if (q === 'up') executeTileAction(tid, 'go-up');
+      else if (q === 'new-folder') executeTileAction(tid, 'new-folder');
+      else if (q === 'new-zip') executeTileAction(tid, 'new-zip');
+      else if (q === 'toggle-view') { tiles[tid].viewMode = tiles[tid].viewMode === 'grid' ? 'list' : 'grid'; renderTile(tid); }
+    });
+  });
+  document.querySelectorAll('.fchip').forEach(function(chip) {
+    chip.addEventListener('click', function(e) {
+      e.stopPropagation(); var tid = chip.dataset.tile; tiles[tid].chip = chip.dataset.chip;
+      document.querySelectorAll('#chips' + tid + ' .fchip').forEach(function(c) { c.classList.toggle('active', c === chip); });
+      renderTile(tid);
+    });
+  });
+
+  // Audio Deck Buttons
+  document.getElementById('deckPlayBtn').onclick = function() { if (inspectedNodeId) playSampleRegion(inspectedNodeId); };
+  document.getElementById('deckZSnapBtn').onclick = function() { inspState.zeroSnap = !inspState.zeroSnap; this.classList.toggle('active-chip', inspState.zeroSnap); };
+  document.getElementById('deckResetTrimBtn').onclick = function() {
+    var n = inspectedNodeId ? vfs.get(inspectedNodeId) : null;
+    if (!n || n.type !== 'sample') return;
+    n.trimStart = 0; n.trimEnd = 1; inspState.zoom = 1.0; inspState.scrollNorm = 0; renderAll();
+  };
+  document.querySelectorAll('[data-insp-dsp]').forEach(function(b) {
+    b.addEventListener('click', function() { var n = inspectedNodeId ? vfs.get(inspectedNodeId) : null; if (n) applyDspToNodes([n], b.dataset.inspDsp); });
+  });
+  document.getElementById('deckAutoSliceBtn').onclick = function() {
+    var n = inspectedNodeId ? vfs.get(inspectedNodeId) : null; if (!n || n.type !== 'sample') return;
+    var cuts = detectTransients(n.buffer, inspState.sliceSens, n.trimStart, n.trimEnd);
+    setNodeSlicesWithUndo(n, cuts, 'AUTO CHOPS'); showToast('DETECTED ' + (cuts.length + 1) + ' CHOPS');
+  };
+  document.getElementById('sliceSensSlider').addEventListener('input', function(e) {
+    inspState.sliceSens = Number(e.target.value) / 100;
+    var n = inspectedNodeId ? vfs.get(inspectedNodeId) : null; if (!n || n.type !== 'sample') return;
+    n.slices = detectTransients(n.buffer, inspState.sliceSens, n.trimStart, n.trimEnd);
+    drawInspectorWaveform(); redrawSampleWaveforms(n.id);
+  });
+  document.querySelectorAll('[data-grid-chop]').forEach(function(b) {
+    b.addEventListener('click', function() {
+      var n = inspectedNodeId ? vfs.get(inspectedNodeId) : null; if (!n || n.type !== 'sample') return;
+      var cnt = parseInt(b.dataset.gridChop, 10), span = n.trimEnd - n.trimStart, cuts = [];
+      for (var i = 1; i < cnt; i++) cuts.push(snapToZeroCrossing(n.buffer, n.trimStart + (span * i) / cnt));
+      setNodeSlicesWithUndo(n, cuts, 'GRID /' + cnt); showToast('CREATED ' + cnt + ' EQUAL CHOPS');
+    });
+  });
+  document.getElementById('deckClearChopsBtn').onclick = function() {
+    var n = inspectedNodeId ? vfs.get(inspectedNodeId) : null;
+    if (!n || n.type !== 'sample' || !n.slices.length) return;
+    setNodeSlicesWithUndo(n, [], 'CLEAR CHOPS'); showToast('CLEARED CHOPS');
+  };
+  document.getElementById('deckExplodeBtn').onclick = explodeInspectedSlices;
+
+  // Video & Image Deck Buttons
+  var deckVideoEl = document.getElementById('deckVideoEl');
+  deckVideoEl.addEventListener('play', updatePanicUI);
+  deckVideoEl.addEventListener('pause', updatePanicUI);
+  deckVideoEl.addEventListener('ended', updatePanicUI);
+  document.getElementById('vidPlayBtn').onclick = function() { if (deckVideoEl.paused) deckVideoEl.play(); else deckVideoEl.pause(); };
+  document.getElementById('vidExtractAudioBtn').onclick = function() { var n = inspectedNodeId ? vfs.get(inspectedNodeId) : null; if (n) extractAudioFromVideo(n); };
+  document.getElementById('vidGrabFrameBtn').onclick = function() { var n = inspectedNodeId ? vfs.get(inspectedNodeId) : null; if (n) grabFrameFromVideo(n); };
+  document.getElementById('vidLightboxBtn').onclick = function() { var n = inspectedNodeId ? vfs.get(inspectedNodeId) : null; if (n) openLightbox(n); };
+  document.getElementById('vidSaveBtn').onclick = function() { if (inspectedNodeId) exportSingleNodeFile(inspectedNodeId); };
+  document.getElementById('deckImgEl').onclick = function() { var n = inspectedNodeId ? vfs.get(inspectedNodeId) : null; if (n) openLightbox(n); };
+  document.getElementById('imgLightboxBtn').onclick = function() { var n = inspectedNodeId ? vfs.get(inspectedNodeId) : null; if (n) openLightbox(n); };
+  document.getElementById('imgRotateBtn').onclick = function() { var n = inspectedNodeId ? vfs.get(inspectedNodeId) : null; if (n) rotateImageNode90(n); };
+  document.getElementById('imgSaveBtn').onclick = function() { if (inspectedNodeId) exportSingleNodeFile(inspectedNodeId); };
+
+  document.addEventListener('click', closeAllMenus);
+
+  // Modal
+  var modalCb = null, modalBd = document.getElementById('modalBackdrop');
+  function openModal(title, html, cb) {
+    document.getElementById('modalTitle').textContent = title;
+    document.getElementById('modalBody').innerHTML = html;
+    modalCb = cb; modalBd.classList.add('open');
+    var firstInp = modalBd.querySelector('input'); if (firstInp) { firstInp.focus(); firstInp.select(); }
+    modalBd.querySelectorAll('input').forEach(function(el) {
+      el.addEventListener('keydown', function(ev) { if (ev.key === 'Enter') { ev.preventDefault(); if (modalCb) modalCb(); closeModal(); } });
+    });
+  }
+  function closeModal() { modalBd.classList.remove('open'); modalCb = null; }
+  document.getElementById('modalClose').onclick = closeModal;
+  document.getElementById('modalCancel').onclick = closeModal;
+  document.getElementById('modalConfirm').onclick = function() { if (modalCb) modalCb(); closeModal(); };
+
+  // Master Volume Knob
+  function updateVolKnob() {
+    document.getElementById('knobValVol').textContent = Math.round(audioState.volume * 100) + '%';
+    document.getElementById('knobIndVol').style.transform = 'rotate(' + (-135 + audioState.volume * 270) + 'deg)';
+    masterGain.gain.setTargetAtTime(audioState.volume, audioCtx.currentTime, 0.015);
+    deckVideoEl.volume = audioState.volume;
+  }
+  updateVolKnob();
+  var volKnob = document.getElementById('volKnob');
+  volKnob.addEventListener('mousedown', function(e) {
+    e.preventDefault(); var ly = e.clientY;
+    function onM(ev) { var dy = ly - ev.clientY; ly = ev.clientY; audioState.volume = Math.max(0, Math.min(1, audioState.volume + dy * 0.008)); updateVolKnob(); }
+    function onU() { window.removeEventListener('mousemove', onM); window.removeEventListener('mouseup', onU); }
+    window.addEventListener('mousemove', onM); window.addEventListener('mouseup', onU);
+  });
+  volKnob.addEventListener('dblclick', function() { audioState.volume = 0.85; updateVolKnob(); });
+
+  document.getElementById('clipLed').onclick = function() { peakHoldL = 0; peakHoldR = 0; this.classList.remove('clipped'); drawMeter(); };
+  document.getElementById('btnUndo').onclick = performUndo;
+  document.getElementById('btnRedo').onclick = performRedo;
+  document.getElementById('btnMono').onclick = function() {
+    audioState.monoMode = !audioState.monoMode;
+    this.classList.toggle('glow-cyan', audioState.monoMode); document.getElementById('ledMono').className = audioState.monoMode ? 'led-slit cyan' : 'led-slit';
+  };
+  document.getElementById('btnLoop').onclick = function() {
+    audioState.loopMode = !audioState.loopMode; deckVideoEl.loop = audioState.loopMode;
+    this.classList.toggle('glow-amber', audioState.loopMode); document.getElementById('ledLoop').className = audioState.loopMode ? 'led-slit amber' : 'led-slit';
+  };
+  document.getElementById('panicBtn').onclick = function() { stopAllVoices(true); };
+  document.getElementById('searchA').addEventListener('input', function(e) { tiles.A.filter = e.target.value; renderTile('A'); });
+  document.getElementById('searchB').addEventListener('input', function(e) { tiles.B.filter = e.target.value; renderTile('B'); });
+  window.addEventListener('resize', drawInspectorWaveform);
+
+  function stepSelection(delta) {
+    var t = tiles[activeTileId], cards = Array.from(document.querySelectorAll('#grid' + activeTileId + ' .node-card[data-id]'));
+    if (!cards.length) return;
+    var ci = cards.findIndex(function(c) { return c.dataset.id === t.lastClicked; });
+    var ni = ci < 0 ? 0 : Math.max(0, Math.min(cards.length - 1, ci + delta));
+    var tc = cards[ni], nid = tc.dataset.id;
+    t.selected.clear(); t.selected.add(nid); t.lastClicked = nid; updateSelectionUI(activeTileId);
+    tc.scrollIntoView({ block: 'nearest' });
+    var n = vfs.get(nid);
+    if (n && !isContainer(n)) { inspectNode(n.id); if (n.type === 'sample') playSampleRegion(n.id); }
+  }
+
+  window.addEventListener('keydown', function(e) {
+    var tag = document.activeElement ? document.activeElement.tagName : '';
+    var typing = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
+    if (e.key === 'Escape') {
+      if (document.getElementById('lightboxBackdrop').classList.contains('open')) closeLightbox();
+      else if (modalBd.classList.contains('open')) closeModal();
+      else { closeAllMenus(); stopAllVoices(true); }
+      return;
+    }
+    if (typing) return;
+
+    if (e.ctrlKey || e.metaKey) {
+      var k = e.key.toLowerCase();
+      if (k === 'z' && !e.shiftKey) { e.preventDefault(); performUndo(); }
+      else if (k === 'y' || (k === 'z' && e.shiftKey)) { e.preventDefault(); performRedo(); }
+      else if (k === 'x') { e.preventDefault(); executeTileAction(activeTileId, 'cut'); }
+      else if (k === 'c') { e.preventDefault(); executeTileAction(activeTileId, 'copy'); }
+      else if (k === 'v') { e.preventDefault(); executeTileAction(activeTileId, 'paste'); }
+      else if (k === 'd') { e.preventDefault(); executeTileAction(activeTileId, 'duplicate'); }
+      else if (k === 'a') { e.preventDefault(); executeTileAction(activeTileId, 'select-all'); }
+      else if (k === 'n' && e.shiftKey) { e.preventDefault(); executeTileAction(activeTileId, 'new-folder'); }
+    } else if (e.key >= '1' && e.key <= '9') {
+      triggerSliceByIndex(parseInt(e.key, 10) - 1);
+    } else if (e.key === ' ') {
+      e.preventDefault();
+      var curN = inspectedNodeId ? vfs.get(inspectedNodeId) : null;
+      if (curN && curN.type === 'sample') playSampleRegion(curN.id);
+      else if (curN && curN.type === 'video') { if (deckVideoEl.paused) deckVideoEl.play(); else deckVideoEl.pause(); }
+    } else if (e.key === 'Delete') executeTileAction(activeTileId, 'delete');
+    else if (e.key === 'F2') { e.preventDefault(); executeTileAction(activeTileId, 'rename'); }
+    else if (e.key === 'Tab') { e.preventDefault(); focusTile(activeTileId === 'A' ? 'B' : 'A'); }
+    else if (e.key === 'Backspace') { e.preventDefault(); executeTileAction(activeTileId, 'go-up'); }
+    else if (e.key === 'Enter') {
+      var t = tiles[activeTileId], n = t.lastClicked ? vfs.get(t.lastClicked) : null;
+      if (n && isContainer(n)) { t.cwd = n.id; t.selected.clear(); renderTile(activeTileId); }
+      else if (n && n.type === 'sample') { inspectNode(n.id); playSampleRegion(n.id); }
+      else if (n && (n.type === 'image' || n.type === 'video')) openLightbox(n);
+    } else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { e.preventDefault(); stepSelection(1); }
+    else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); stepSelection(-1); }
+  });
+
+  /* =====================================================================
+     INIT
+  ===================================================================== */
+  var leftDir = createFolder('MEDIA', ROOT_ID), rightDir = createFolder('ARCHIVE', ROOT_ID);
+  createZipFolder('PACK_01.zip', rightDir.id);
+  tiles.A.cwd = leftDir.id; tiles.B.cwd = rightDir.id;
+  renderAll();
+})();
+</script>
+</body>
+</html>
